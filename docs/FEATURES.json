@@ -1,0 +1,850 @@
+{
+  "metadata": {
+    "project": "rekordbox_creative",
+    "description": "Feature tracking for agent-driven development. Agents may ONLY toggle the 'passes' field. Do not edit descriptions or add/remove features.",
+    "total_features": 62,
+    "passing": 0,
+    "failing": 62
+  },
+  "features": [
+    {
+      "id": "SCAN-001",
+      "category": "analysis",
+      "name": "Folder Selection",
+      "description": "User can select a local folder via file picker dialog. The app discovers all audio files (MP3, WAV, FLAC, OGG, M4A, AAC) recursively.",
+      "passes": false,
+      "steps": [
+        "Open app",
+        "Click 'Select Music Folder' button",
+        "Navigate to a folder containing audio files",
+        "Confirm selection",
+        "Verify file count displayed matches actual audio files in folder"
+      ]
+    },
+    {
+      "id": "SCAN-002",
+      "category": "analysis",
+      "name": "Batch Analysis",
+      "description": "App runs audio_analyzer.analyze_batch() on all discovered files. Shows progress bar with track name and percentage.",
+      "passes": false,
+      "steps": [
+        "Select folder with 5+ audio files",
+        "Observe progress bar appears showing current file name",
+        "Wait for completion",
+        "Verify all tracks appear in the library"
+      ]
+    },
+    {
+      "id": "SCAN-003",
+      "category": "analysis",
+      "name": "Analysis Caching",
+      "description": "Re-selecting the same folder skips already-analyzed tracks (matched by file hash). Only new/modified files are re-analyzed.",
+      "passes": false,
+      "steps": [
+        "Analyze a folder of 5 files",
+        "Close and reopen app",
+        "Select same folder",
+        "Verify analysis completes almost instantly (0 new files to analyze)",
+        "Add a new file to the folder",
+        "Re-select folder",
+        "Verify only the 1 new file is analyzed"
+      ]
+    },
+    {
+      "id": "SCAN-004",
+      "category": "analysis",
+      "name": "Metadata Extraction",
+      "description": "App extracts ID3/metadata tags (artist, title, album, genre) from each file and stores alongside analysis results.",
+      "passes": false,
+      "steps": [
+        "Analyze a tagged MP3 file",
+        "Select the track in the UI",
+        "Verify artist, title, and album are displayed in the inspector"
+      ]
+    },
+    {
+      "id": "SCAN-005",
+      "category": "analysis",
+      "name": "Error Resilience",
+      "description": "Corrupt or unreadable files are skipped with a warning. Analysis continues for remaining files.",
+      "passes": false,
+      "steps": [
+        "Place a corrupted file in the music folder",
+        "Run analysis",
+        "Verify error message appears for the corrupt file",
+        "Verify all other files are analyzed successfully"
+      ]
+    },
+    {
+      "id": "DB-001",
+      "category": "database",
+      "name": "SQLite Storage",
+      "description": "Analysis results are persisted in a local SQLite database. Database file is created on first run.",
+      "passes": false,
+      "steps": [
+        "Run app for the first time",
+        "Verify database file is created in app data directory",
+        "Analyze some files",
+        "Close app",
+        "Reopen app",
+        "Verify previously analyzed tracks are still available"
+      ]
+    },
+    {
+      "id": "DB-002",
+      "category": "database",
+      "name": "Track Persistence",
+      "description": "All track data (analysis results, metadata, file paths) survives app restarts.",
+      "passes": false,
+      "steps": [
+        "Analyze 3 files",
+        "Note their BPM, key, energy values",
+        "Close app completely",
+        "Reopen app",
+        "Verify same 3 tracks appear with identical values"
+      ]
+    },
+    {
+      "id": "GRAPH-001",
+      "category": "graph_engine",
+      "name": "Node Creation",
+      "description": "Each analyzed track becomes a node in the graph with all analysis data attached.",
+      "passes": false,
+      "steps": [
+        "Analyze 5 files",
+        "Verify 5 nodes appear on the graph canvas",
+        "Click each node and verify it shows correct track data"
+      ]
+    },
+    {
+      "id": "GRAPH-002",
+      "category": "graph_engine",
+      "name": "Edge Computation",
+      "description": "Compatibility edges are computed between all track pairs using the scoring algorithm. Only edges above threshold (0.3) are stored.",
+      "passes": false,
+      "steps": [
+        "Analyze 5 files",
+        "Verify edges appear between compatible tracks",
+        "Verify no edges appear between tracks with very different BPM and key",
+        "Check edge compatibility scores are between 0 and 1"
+      ]
+    },
+    {
+      "id": "GRAPH-003",
+      "category": "graph_engine",
+      "name": "Harmonic Scoring",
+      "description": "Harmonic score correctly implements Camelot wheel rules: same key=1.0, adjacent=0.85, parallel=0.8, two-step=0.5.",
+      "passes": false,
+      "steps": [
+        "Compute harmonic_score('8A', '8A') → 1.0",
+        "Compute harmonic_score('8A', '9A') → 0.85",
+        "Compute harmonic_score('8A', '8B') → 0.8",
+        "Compute harmonic_score('8A', '10A') → 0.5",
+        "Compute harmonic_score('8A', '3A') → 0.1",
+        "Verify wrapping: harmonic_score('12A', '1A') → 0.85"
+      ]
+    },
+    {
+      "id": "GRAPH-004",
+      "category": "graph_engine",
+      "name": "BPM Scoring",
+      "description": "BPM score gives 1.0 for ±2%, 0.8 for ±4%, 0.5 for ±6%, lower beyond. Detects half/double time.",
+      "passes": false,
+      "steps": [
+        "bpm_score(128, 128) → 1.0",
+        "bpm_score(128, 130) → ~1.0 (1.5% diff)",
+        "bpm_score(128, 133) → ~0.8 (3.9% diff)",
+        "bpm_score(128, 135) → ~0.5 (5.5% diff)",
+        "bpm_score(128, 64) → 0.6 (half time)",
+        "bpm_score(128, 256) → 0.6 (double time)"
+      ]
+    },
+    {
+      "id": "GRAPH-005",
+      "category": "graph_engine",
+      "name": "Full Compatibility Score",
+      "description": "Aggregate compatibility combines all 6 sub-scores with configured weights. Weights sum to 1.0.",
+      "passes": false,
+      "steps": [
+        "Create two tracks with known attributes",
+        "Compute full compatibility",
+        "Verify result matches manual weighted-sum calculation",
+        "Verify score is between 0 and 1"
+      ]
+    },
+    {
+      "id": "GRAPH-006",
+      "category": "graph_engine",
+      "name": "Clustering (Vibe Islands)",
+      "description": "Tracks are grouped into clusters using DBSCAN on their feature vectors. Clusters represent 'vibe islands' of sonically similar tracks.",
+      "passes": false,
+      "steps": [
+        "Analyze 20+ tracks with variety in energy/BPM/genre",
+        "Run clustering",
+        "Verify multiple clusters are produced",
+        "Verify tracks within a cluster have similar characteristics",
+        "Verify cluster labels are auto-generated"
+      ]
+    },
+    {
+      "id": "GRAPH-007",
+      "category": "graph_engine",
+      "name": "Force-Directed Layout",
+      "description": "Nodes are positioned using force-directed layout where compatible tracks attract and incompatible repel.",
+      "passes": false,
+      "steps": [
+        "Load library with 20+ tracks",
+        "Apply force-directed layout",
+        "Verify highly compatible tracks are near each other",
+        "Verify incompatible tracks are far apart",
+        "Verify no nodes overlap"
+      ]
+    },
+    {
+      "id": "GRAPH-008",
+      "category": "graph_engine",
+      "name": "Scatter Map Layout",
+      "description": "Alternative layout using t-SNE/UMAP projection where proximity equals sonic similarity.",
+      "passes": false,
+      "steps": [
+        "Load library with 20+ tracks",
+        "Switch to scatter map view",
+        "Verify tracks cluster by similarity",
+        "Verify layout is deterministic (same data → same layout)"
+      ]
+    },
+    {
+      "id": "GRAPH-009",
+      "category": "graph_engine",
+      "name": "Greedy Pathfinding",
+      "description": "Given selected tracks, find an ordering maximizing total transition quality using greedy nearest-neighbor.",
+      "passes": false,
+      "steps": [
+        "Select 8 tracks",
+        "Run 'Optimize Order'",
+        "Verify resulting order has higher total compatibility than original",
+        "Verify start/end track constraints are respected if set"
+      ]
+    },
+    {
+      "id": "GRAPH-010",
+      "category": "graph_engine",
+      "name": "2-Opt Path Improvement",
+      "description": "Greedy ordering is improved by 2-opt swaps for better total compatibility.",
+      "passes": false,
+      "steps": [
+        "Select 10 tracks",
+        "Run greedy ordering",
+        "Run 2-opt improvement",
+        "Verify 2-opt result has >= total compatibility as greedy result"
+      ]
+    },
+    {
+      "id": "SUG-001",
+      "category": "suggestions",
+      "name": "Basic Suggestions",
+      "description": "Selecting a track shows top 8 suggested next tracks ranked by compatibility.",
+      "passes": false,
+      "steps": [
+        "Load library with 20+ tracks",
+        "Click on a track",
+        "Verify suggestion panel shows 8 tracks",
+        "Verify suggestions are ordered by score (highest first)",
+        "Verify scores are displayed next to each suggestion"
+      ]
+    },
+    {
+      "id": "SUG-002",
+      "category": "suggestions",
+      "name": "Sequence-Aware Suggestions",
+      "description": "When building a sequence, suggestions consider the entire sequence history, not just the last track.",
+      "passes": false,
+      "steps": [
+        "Add track A to sequence",
+        "Get suggestions (note results)",
+        "Add track B to sequence",
+        "Get new suggestions",
+        "Verify suggestions changed to account for both A and B"
+      ]
+    },
+    {
+      "id": "SUG-003",
+      "category": "suggestions",
+      "name": "Harmonic Flow Strategy",
+      "description": "Default strategy prioritizes Camelot-compatible keys in suggestions.",
+      "passes": false,
+      "steps": [
+        "Select track with key 8A",
+        "Verify top suggestions are predominantly 8A, 7A, 9A, or 8B"
+      ]
+    },
+    {
+      "id": "SUG-004",
+      "category": "suggestions",
+      "name": "Energy Arc Strategy",
+      "description": "Energy arc strategy targets energy levels based on set position (build up → peak → cool down).",
+      "passes": false,
+      "steps": [
+        "Set strategy to Energy Arc",
+        "Build sequence of 10 tracks",
+        "Verify early suggestions have moderate energy",
+        "Verify mid-set suggestions have high energy",
+        "Verify late-set suggestions have lower energy"
+      ]
+    },
+    {
+      "id": "SUG-005",
+      "category": "suggestions",
+      "name": "Discovery Strategy",
+      "description": "Discovery strategy boosts rarely-used tracks in suggestions.",
+      "passes": false,
+      "steps": [
+        "Mark some tracks as frequently used",
+        "Set strategy to Discovery",
+        "Verify rarely-used tracks appear higher in suggestions",
+        "Verify never-used tracks get the strongest boost"
+      ]
+    },
+    {
+      "id": "SUG-006",
+      "category": "suggestions",
+      "name": "Groove Lock Strategy",
+      "description": "Groove lock strategy strongly prefers tracks with the same groove type.",
+      "passes": false,
+      "steps": [
+        "Select a four-on-floor track",
+        "Set strategy to Groove Lock",
+        "Verify top suggestions are predominantly four-on-floor"
+      ]
+    },
+    {
+      "id": "SUG-007",
+      "category": "suggestions",
+      "name": "Contrast Strategy",
+      "description": "Contrast strategy rewards energy and frequency differences for intentional variety.",
+      "passes": false,
+      "steps": [
+        "Select a high-energy bass-heavy track",
+        "Set strategy to Contrast",
+        "Verify suggestions include lower-energy and bright/balanced tracks"
+      ]
+    },
+    {
+      "id": "SUG-008",
+      "category": "suggestions",
+      "name": "BPM Range Filter",
+      "description": "User can filter suggestions to a specific BPM range.",
+      "passes": false,
+      "steps": [
+        "Set BPM filter to 125-132",
+        "Get suggestions",
+        "Verify all suggested tracks have BPM between 125 and 132"
+      ]
+    },
+    {
+      "id": "SUG-009",
+      "category": "suggestions",
+      "name": "Key Lock Filter",
+      "description": "Key lock filter restricts suggestions to harmonically compatible keys only.",
+      "passes": false,
+      "steps": [
+        "Select track with key 8A",
+        "Enable key lock",
+        "Verify all suggestions are in keys 7A, 8A, 9A, 8B, or 7B/9B"
+      ]
+    },
+    {
+      "id": "SUG-010",
+      "category": "suggestions",
+      "name": "Diversity Bonus",
+      "description": "Suggestions include a diversity bonus for tracks from different clusters than recently played.",
+      "passes": false,
+      "steps": [
+        "Build sequence of 5 tracks all from same cluster",
+        "Verify suggestions boost tracks from other clusters",
+        "Compare scores with and without diversity bonus active"
+      ]
+    },
+    {
+      "id": "SUG-011",
+      "category": "suggestions",
+      "name": "Weight Customization",
+      "description": "User can adjust the relative weights of harmonic, BPM, energy, groove, frequency, and mix quality in scoring.",
+      "passes": false,
+      "steps": [
+        "Open settings",
+        "Change harmonic weight from 0.30 to 0.50",
+        "Verify suggestions change to prioritize harmonic compatibility more heavily",
+        "Verify weights are rebalanced to sum to 1.0"
+      ]
+    },
+    {
+      "id": "UI-001",
+      "category": "ui",
+      "name": "App Window",
+      "description": "Desktop application opens a resizable window with a title bar, menu, and dark theme.",
+      "passes": false,
+      "steps": [
+        "Launch executable",
+        "Verify window appears",
+        "Verify dark theme is applied",
+        "Resize window and verify content adapts"
+      ]
+    },
+    {
+      "id": "UI-002",
+      "category": "ui",
+      "name": "Node Graph Canvas",
+      "description": "Main area shows an interactive canvas where track nodes are displayed. Supports pan and zoom.",
+      "passes": false,
+      "steps": [
+        "Load library with tracks",
+        "Verify nodes appear on canvas",
+        "Scroll to zoom in/out",
+        "Middle-click drag to pan",
+        "Verify nodes remain interactive after pan/zoom"
+      ]
+    },
+    {
+      "id": "UI-003",
+      "category": "ui",
+      "name": "Node Display",
+      "description": "Each node shows track name, BPM, key. Color-coded by key or cluster. Size varies by energy.",
+      "passes": false,
+      "steps": [
+        "Load tracks",
+        "Verify each node shows track name",
+        "Verify BPM and key labels are visible",
+        "Verify color coding is applied consistently",
+        "Verify higher-energy tracks have larger nodes"
+      ]
+    },
+    {
+      "id": "UI-004",
+      "category": "ui",
+      "name": "Node Selection",
+      "description": "Clicking a node selects it, highlights connected edges, and shows details in the inspector panel.",
+      "passes": false,
+      "steps": [
+        "Click on a node",
+        "Verify node gets a selection highlight",
+        "Verify connected edges are emphasized",
+        "Verify inspector panel shows track details"
+      ]
+    },
+    {
+      "id": "UI-005",
+      "category": "ui",
+      "name": "Node Dragging",
+      "description": "Nodes can be dragged to reposition them on the canvas. Edges follow smoothly.",
+      "passes": false,
+      "steps": [
+        "Click and drag a node",
+        "Verify node follows mouse",
+        "Verify connected edges update in real-time",
+        "Release node and verify it stays in new position"
+      ]
+    },
+    {
+      "id": "UI-006",
+      "category": "ui",
+      "name": "Edge Display",
+      "description": "Edges between nodes show compatibility. Thicker = higher compatibility. Optional color by type (harmonic, energy).",
+      "passes": false,
+      "steps": [
+        "Load tracks with varying compatibility",
+        "Verify edges are visible between compatible tracks",
+        "Verify high-compatibility edges are thicker than low ones",
+        "Verify edges disappear for scores below threshold"
+      ]
+    },
+    {
+      "id": "UI-007",
+      "category": "ui",
+      "name": "Manual Edge Creation",
+      "description": "User can draw an edge between two nodes to manually mark them as a good transition.",
+      "passes": false,
+      "steps": [
+        "Drag from one node's output port to another node",
+        "Verify edge is created",
+        "Verify edge is marked as user-created",
+        "Verify user-created edges persist across sessions"
+      ]
+    },
+    {
+      "id": "UI-008",
+      "category": "ui",
+      "name": "Track Inspector Panel",
+      "description": "Side panel showing selected track's full analysis: artist, title, BPM, key, energy, danceability, valence, structure, and all other metrics.",
+      "passes": false,
+      "steps": [
+        "Select a track",
+        "Verify inspector shows: title, artist, duration",
+        "Verify BPM and key are displayed",
+        "Verify all Spotify-style metrics are shown as bars",
+        "Verify DJ metrics (mix scores, groove, frequency weight) are displayed",
+        "Verify structure (drops, breakdowns) is listed with timestamps"
+      ]
+    },
+    {
+      "id": "UI-009",
+      "category": "ui",
+      "name": "Suggestion Panel",
+      "description": "Panel showing top N suggested tracks with scores, strategy selector, and filter controls.",
+      "passes": false,
+      "steps": [
+        "Select a track",
+        "Verify suggestion panel shows recommended tracks",
+        "Verify each suggestion shows compatibility score",
+        "Verify strategy dropdown is accessible",
+        "Click a suggestion to highlight it on the graph"
+      ]
+    },
+    {
+      "id": "UI-010",
+      "category": "ui",
+      "name": "Playlist Panel",
+      "description": "Panel showing the current set sequence. Tracks can be reordered, added, removed.",
+      "passes": false,
+      "steps": [
+        "Add tracks to sequence",
+        "Verify playlist panel shows ordered list",
+        "Drag to reorder tracks",
+        "Click remove button to delete a track from sequence",
+        "Verify sequence updates accordingly"
+      ]
+    },
+    {
+      "id": "UI-011",
+      "category": "ui",
+      "name": "Track Swap",
+      "description": "User can swap a track in the sequence with a suggested alternative. Edges and suggestions update.",
+      "passes": false,
+      "steps": [
+        "Build sequence with 5 tracks",
+        "Right-click track 3",
+        "Select 'Swap Track'",
+        "Choose a suggestion from the swap options",
+        "Verify track 3 is replaced",
+        "Verify edges to neighbors are recomputed",
+        "Verify suggestions update"
+      ]
+    },
+    {
+      "id": "UI-012",
+      "category": "ui",
+      "name": "Right-Click Context Menu",
+      "description": "Right-clicking a node shows: Add to Sequence, Find Similar, Swap Track, Remove from Graph, Show in Folder.",
+      "passes": false,
+      "steps": [
+        "Right-click a node",
+        "Verify context menu appears with all expected options",
+        "Click each option and verify correct behavior"
+      ]
+    },
+    {
+      "id": "UI-013",
+      "category": "ui",
+      "name": "Viewport Culling",
+      "description": "Only nodes visible in the current viewport are rendered. Performance stays smooth with 1000+ nodes.",
+      "passes": false,
+      "steps": [
+        "Load 1000+ track library",
+        "Zoom out to see all nodes",
+        "Verify render performance is acceptable",
+        "Zoom in to small area",
+        "Verify only visible nodes are fully rendered"
+      ]
+    },
+    {
+      "id": "UI-014",
+      "category": "ui",
+      "name": "Search and Filter",
+      "description": "Search bar to find tracks by name, artist, BPM, or key. Results highlighted on canvas.",
+      "passes": false,
+      "steps": [
+        "Type artist name in search bar",
+        "Verify matching tracks are highlighted on canvas",
+        "Search by key (e.g., '8A')",
+        "Verify all 8A tracks are highlighted",
+        "Search by BPM range (e.g., '128')",
+        "Verify matching tracks are highlighted"
+      ]
+    },
+    {
+      "id": "UI-015",
+      "category": "ui",
+      "name": "Layout Mode Switching",
+      "description": "User can switch between Force-Directed, Scatter Map, and Linear layout modes.",
+      "passes": false,
+      "steps": [
+        "Load library",
+        "Switch to Force-Directed layout",
+        "Verify nodes rearrange with animation",
+        "Switch to Scatter Map",
+        "Verify nodes rearrange into similarity clusters",
+        "Switch to Linear",
+        "Verify nodes arrange in a sequence line"
+      ]
+    },
+    {
+      "id": "UI-016",
+      "category": "ui",
+      "name": "Cluster Visualization",
+      "description": "Vibe island clusters are visually distinct with colored backgrounds or hulls around grouped nodes.",
+      "passes": false,
+      "steps": [
+        "Load library with multiple clusters",
+        "Verify each cluster has a distinct visual boundary",
+        "Verify cluster label is displayed",
+        "Verify tracks in a cluster share similar characteristics"
+      ]
+    },
+    {
+      "id": "UI-017",
+      "category": "ui",
+      "name": "Suggestion Highlighting",
+      "description": "Suggested tracks glow or pulse on the graph canvas when the suggestion panel updates.",
+      "passes": false,
+      "steps": [
+        "Select a track",
+        "Verify suggested tracks on the canvas have a glow effect",
+        "Verify glow intensity correlates with compatibility score",
+        "Select a different track",
+        "Verify glow shifts to new suggestions"
+      ]
+    },
+    {
+      "id": "UI-018",
+      "category": "ui",
+      "name": "Progress Bar During Analysis",
+      "description": "While analyzing files, a progress bar shows current track name, track count progress, and estimated time remaining.",
+      "passes": false,
+      "steps": [
+        "Select folder with 10+ unanalyzed tracks",
+        "Verify progress bar appears",
+        "Verify current track name updates",
+        "Verify percentage increases",
+        "Verify completion triggers graph update"
+      ]
+    },
+    {
+      "id": "SET-001",
+      "category": "set_building",
+      "name": "Add to Sequence",
+      "description": "User can add a track to the current set sequence. Track position is tracked.",
+      "passes": false,
+      "steps": [
+        "Click a track node",
+        "Click 'Add to Sequence' or drag to playlist panel",
+        "Verify track appears in the playlist panel",
+        "Verify sequence position is assigned"
+      ]
+    },
+    {
+      "id": "SET-002",
+      "category": "set_building",
+      "name": "Reorder Sequence",
+      "description": "Tracks in the sequence can be reordered via drag-and-drop in the playlist panel.",
+      "passes": false,
+      "steps": [
+        "Add 5 tracks to sequence",
+        "Drag track 3 to position 1",
+        "Verify order updates",
+        "Verify edges on canvas update to reflect new order"
+      ]
+    },
+    {
+      "id": "SET-003",
+      "category": "set_building",
+      "name": "Remove from Sequence",
+      "description": "Tracks can be removed from the sequence. Node remains on graph but is no longer in the set.",
+      "passes": false,
+      "steps": [
+        "Add tracks to sequence",
+        "Remove a track from sequence",
+        "Verify track is removed from playlist panel",
+        "Verify node remains on canvas",
+        "Verify sequence renumbers"
+      ]
+    },
+    {
+      "id": "SET-004",
+      "category": "set_building",
+      "name": "Auto-Order Sequence",
+      "description": "User can click 'Optimize Order' to run pathfinding and reorder the sequence for best transition flow.",
+      "passes": false,
+      "steps": [
+        "Add 8 tracks to sequence in random order",
+        "Click 'Optimize Order'",
+        "Verify sequence is reordered",
+        "Verify total compatibility score is displayed and improved"
+      ]
+    },
+    {
+      "id": "SET-005",
+      "category": "set_building",
+      "name": "Set Segments / Chapters",
+      "description": "User can group sequential tracks into labeled segments (chapters) for set structure.",
+      "passes": false,
+      "steps": [
+        "Build sequence of 12 tracks",
+        "Select tracks 1-4 and group as 'Opener'",
+        "Select tracks 5-8 and group as 'Peak Time'",
+        "Select tracks 9-12 and group as 'Cool Down'",
+        "Verify segments are labeled in the playlist panel"
+      ]
+    },
+    {
+      "id": "EXP-001",
+      "category": "export",
+      "name": "M3U Export",
+      "description": "Current sequence can be exported as an M3U playlist file referencing local audio file paths.",
+      "passes": false,
+      "steps": [
+        "Build sequence of 5+ tracks",
+        "Click Export → M3U",
+        "Choose save location",
+        "Verify .m3u file is created",
+        "Open .m3u file and verify it lists correct file paths"
+      ]
+    },
+    {
+      "id": "EXP-002",
+      "category": "export",
+      "name": "Rekordbox XML Export",
+      "description": "Current sequence can be exported as Rekordbox-compatible XML playlist.",
+      "passes": false,
+      "steps": [
+        "Build sequence of 5+ tracks",
+        "Click Export → Rekordbox",
+        "Choose save location",
+        "Verify XML file is created",
+        "Import into Rekordbox and verify tracks appear in correct order"
+      ]
+    },
+    {
+      "id": "EXP-003",
+      "category": "export",
+      "name": "CSV Export",
+      "description": "Full library analysis data can be exported as CSV with all metrics.",
+      "passes": false,
+      "steps": [
+        "Click Export → CSV",
+        "Choose save location",
+        "Verify CSV file contains all tracks",
+        "Verify columns include all analysis metrics",
+        "Open in spreadsheet and verify data integrity"
+      ]
+    },
+    {
+      "id": "EXP-004",
+      "category": "export",
+      "name": "Save/Load Graph State",
+      "description": "Current graph state (node positions, sequence, settings) can be saved and reloaded.",
+      "passes": false,
+      "steps": [
+        "Arrange nodes on canvas",
+        "Build a sequence",
+        "Save graph state",
+        "Close app",
+        "Reopen and load saved state",
+        "Verify node positions and sequence are restored"
+      ]
+    },
+    {
+      "id": "PERF-001",
+      "category": "performance",
+      "name": "Large Library Handling",
+      "description": "App handles 5000+ track libraries without UI lag. Graph renders within 3 seconds.",
+      "passes": false,
+      "steps": [
+        "Load library with 5000+ pre-analyzed tracks",
+        "Verify graph renders within 3 seconds",
+        "Pan and zoom smoothly",
+        "Select nodes with no perceptible delay"
+      ]
+    },
+    {
+      "id": "PERF-002",
+      "category": "performance",
+      "name": "Incremental Edge Computation",
+      "description": "Adding new tracks computes edges only for new tracks vs existing library, not full recomputation.",
+      "passes": false,
+      "steps": [
+        "Load library with 100 analyzed tracks",
+        "Add 5 new tracks to folder",
+        "Re-scan folder",
+        "Verify only 5 × 100 edge computations run (not 105²)"
+      ]
+    },
+    {
+      "id": "PERF-003",
+      "category": "performance",
+      "name": "Background Analysis",
+      "description": "Analysis runs in a background thread. UI remains responsive during processing.",
+      "passes": false,
+      "steps": [
+        "Start analyzing 20+ files",
+        "While analysis runs, interact with the UI",
+        "Verify canvas is pannable, nodes are clickable",
+        "Verify progress bar updates without freezing"
+      ]
+    },
+    {
+      "id": "PKG-001",
+      "category": "packaging",
+      "name": "Standalone Executable (macOS)",
+      "description": "App can be packaged as a macOS .app bundle that runs without Python installed.",
+      "passes": false,
+      "steps": [
+        "Build executable with PyInstaller",
+        "Copy to a machine without Python",
+        "Launch the app",
+        "Verify all features work"
+      ]
+    },
+    {
+      "id": "PKG-002",
+      "category": "packaging",
+      "name": "Standalone Executable (Windows)",
+      "description": "App can be packaged as a Windows .exe that runs without Python installed.",
+      "passes": false,
+      "steps": [
+        "Build executable with PyInstaller",
+        "Copy to a machine without Python",
+        "Launch the app",
+        "Verify all features work"
+      ]
+    },
+    {
+      "id": "PREF-001",
+      "category": "preferences",
+      "name": "Settings Persistence",
+      "description": "User preferences (weight values, default strategy, UI theme, last folder) persist across sessions.",
+      "passes": false,
+      "steps": [
+        "Open settings",
+        "Change harmonic weight to 0.40",
+        "Change default strategy to Energy Arc",
+        "Close app",
+        "Reopen app",
+        "Verify settings are preserved"
+      ]
+    },
+    {
+      "id": "PREF-002",
+      "category": "preferences",
+      "name": "Edge Threshold Setting",
+      "description": "User can adjust the minimum compatibility threshold for displaying edges (default 0.3).",
+      "passes": false,
+      "steps": [
+        "Open settings",
+        "Change edge threshold from 0.3 to 0.5",
+        "Verify edges below 0.5 disappear from canvas",
+        "Change to 0.1",
+        "Verify more edges appear"
+      ]
+    }
+  ]
+}

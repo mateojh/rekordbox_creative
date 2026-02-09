@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local Claude overrides
+CLAUDE.local.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Audio analyzer cache
+.audio_analyzer_cache/
+
+# App database (user data, not committed)
+*.db
+*.sqlite3
+
+# PyInstaller
+*.spec
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.ruff_cache/
