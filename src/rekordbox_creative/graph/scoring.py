@@ -129,19 +129,20 @@ def bpm_score(
     reduce score by 20%.
     """
     ratio = max(bpm_a, bpm_b) / min(bpm_a, bpm_b)
+    _EPS = 1e-9  # float tolerance for boundary comparisons
 
     # Check half/double time
     if 1.95 <= ratio <= 2.05:
         score = 0.6
     else:
         pct_diff = abs(ratio - 1.0)
-        if pct_diff <= 0.02:
+        if pct_diff <= 0.02 + _EPS:
             score = 1.0
-        elif pct_diff <= 0.04:
+        elif pct_diff <= 0.04 + _EPS:
             score = 0.8
-        elif pct_diff <= 0.06:
+        elif pct_diff <= 0.06 + _EPS:
             score = 0.5
-        elif pct_diff <= 0.10:
+        elif pct_diff <= 0.10 + _EPS:
             score = 0.2
         else:
             score = 0.05
@@ -174,13 +175,14 @@ def energy_score(
     'arc' mode: returns 1.0 - abs(diff) for strategy layer use.
     """
     diff = abs(energy_a - energy_b)
+    _EPS = 1e-9
 
     if mode == "smooth":
-        if diff <= 0.10:
+        if diff <= 0.10 + _EPS:
             return 1.0
-        elif diff <= 0.20:
+        elif diff <= 0.20 + _EPS:
             return 0.8
-        elif diff <= 0.35:
+        elif diff <= 0.35 + _EPS:
             return 0.5
         else:
             return 0.2

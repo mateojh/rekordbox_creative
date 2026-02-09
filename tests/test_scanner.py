@@ -29,7 +29,6 @@ from rekordbox_creative.analysis.scanner import (
 from rekordbox_creative.db.database import Database
 from rekordbox_creative.db.models import TrackMetadata
 
-
 # ===================================================================
 # Helper: create dummy audio files in a temp directory
 # ===================================================================
@@ -351,7 +350,6 @@ class TestErrorResilience:
         self, mock_analyzer_cls: MagicMock, mock_hash: MagicMock, tmp_path: Path
     ) -> None:
         """Corrupted file generates an error but other files still succeed."""
-        results_map = {}
         good_result = _make_mock_analysis_result()
 
         f_good1 = _create_file(tmp_path / "good1.mp3", b"g1")

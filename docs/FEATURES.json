@@ -3,8 +3,8 @@
     "project": "rekordbox_creative",
     "description": "Feature tracking for agent-driven development. Agents may ONLY toggle the 'passes' field. Do not edit descriptions or add/remove features.",
     "total_features": 62,
-    "passing": 0,
-    "failing": 62
+    "passing": 32,
+    "failing": 30
   },
   "features": [
     {
@@ -12,7 +12,7 @@
       "category": "analysis",
       "name": "Folder Selection",
       "description": "User can select a local folder via file picker dialog. The app discovers all audio files (MP3, WAV, FLAC, OGG, M4A, AAC) recursively.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Open app",
         "Click 'Select Music Folder' button",
@@ -26,7 +26,7 @@
       "category": "analysis",
       "name": "Batch Analysis",
       "description": "App runs audio_analyzer.analyze_batch() on all discovered files. Shows progress bar with track name and percentage.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Select folder with 5+ audio files",
         "Observe progress bar appears showing current file name",
@@ -39,7 +39,7 @@
       "category": "analysis",
       "name": "Analysis Caching",
       "description": "Re-selecting the same folder skips already-analyzed tracks (matched by file hash). Only new/modified files are re-analyzed.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Analyze a folder of 5 files",
         "Close and reopen app",
@@ -55,7 +55,7 @@
       "category": "analysis",
       "name": "Metadata Extraction",
       "description": "App extracts ID3/metadata tags (artist, title, album, genre) from each file and stores alongside analysis results.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Analyze a tagged MP3 file",
         "Select the track in the UI",
@@ -67,7 +67,7 @@
       "category": "analysis",
       "name": "Error Resilience",
       "description": "Corrupt or unreadable files are skipped with a warning. Analysis continues for remaining files.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Place a corrupted file in the music folder",
         "Run analysis",
@@ -80,7 +80,7 @@
       "category": "database",
       "name": "SQLite Storage",
       "description": "Analysis results are persisted in a local SQLite database. Database file is created on first run.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Run app for the first time",
         "Verify database file is created in app data directory",
@@ -95,7 +95,7 @@
       "category": "database",
       "name": "Track Persistence",
       "description": "All track data (analysis results, metadata, file paths) survives app restarts.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Analyze 3 files",
         "Note their BPM, key, energy values",
@@ -109,7 +109,7 @@
       "category": "graph_engine",
       "name": "Node Creation",
       "description": "Each analyzed track becomes a node in the graph with all analysis data attached.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Analyze 5 files",
         "Verify 5 nodes appear on the graph canvas",
@@ -121,7 +121,7 @@
       "category": "graph_engine",
       "name": "Edge Computation",
       "description": "Compatibility edges are computed between all track pairs using the scoring algorithm. Only edges above threshold (0.3) are stored.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Analyze 5 files",
         "Verify edges appear between compatible tracks",
@@ -134,7 +134,7 @@
       "category": "graph_engine",
       "name": "Harmonic Scoring",
       "description": "Harmonic score correctly implements Camelot wheel rules: same key=1.0, adjacent=0.85, parallel=0.8, two-step=0.5.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Compute harmonic_score('8A', '8A') → 1.0",
         "Compute harmonic_score('8A', '9A') → 0.85",
@@ -149,7 +149,7 @@
       "category": "graph_engine",
       "name": "BPM Scoring",
       "description": "BPM score gives 1.0 for ±2%, 0.8 for ±4%, 0.5 for ±6%, lower beyond. Detects half/double time.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "bpm_score(128, 128) → 1.0",
         "bpm_score(128, 130) → ~1.0 (1.5% diff)",
@@ -164,7 +164,7 @@
       "category": "graph_engine",
       "name": "Full Compatibility Score",
       "description": "Aggregate compatibility combines all 6 sub-scores with configured weights. Weights sum to 1.0.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Create two tracks with known attributes",
         "Compute full compatibility",
@@ -177,7 +177,7 @@
       "category": "graph_engine",
       "name": "Clustering (Vibe Islands)",
       "description": "Tracks are grouped into clusters using DBSCAN on their feature vectors. Clusters represent 'vibe islands' of sonically similar tracks.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Analyze 20+ tracks with variety in energy/BPM/genre",
         "Run clustering",
@@ -191,7 +191,7 @@
       "category": "graph_engine",
       "name": "Force-Directed Layout",
       "description": "Nodes are positioned using force-directed layout where compatible tracks attract and incompatible repel.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Load library with 20+ tracks",
         "Apply force-directed layout",
@@ -205,7 +205,7 @@
       "category": "graph_engine",
       "name": "Scatter Map Layout",
       "description": "Alternative layout using t-SNE/UMAP projection where proximity equals sonic similarity.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Load library with 20+ tracks",
         "Switch to scatter map view",
@@ -218,7 +218,7 @@
       "category": "graph_engine",
       "name": "Greedy Pathfinding",
       "description": "Given selected tracks, find an ordering maximizing total transition quality using greedy nearest-neighbor.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Select 8 tracks",
         "Run 'Optimize Order'",
@@ -231,7 +231,7 @@
       "category": "graph_engine",
       "name": "2-Opt Path Improvement",
       "description": "Greedy ordering is improved by 2-opt swaps for better total compatibility.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Select 10 tracks",
         "Run greedy ordering",
@@ -244,7 +244,7 @@
       "category": "suggestions",
       "name": "Basic Suggestions",
       "description": "Selecting a track shows top 8 suggested next tracks ranked by compatibility.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Load library with 20+ tracks",
         "Click on a track",
@@ -258,7 +258,7 @@
       "category": "suggestions",
       "name": "Sequence-Aware Suggestions",
       "description": "When building a sequence, suggestions consider the entire sequence history, not just the last track.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Add track A to sequence",
         "Get suggestions (note results)",
@@ -272,7 +272,7 @@
       "category": "suggestions",
       "name": "Harmonic Flow Strategy",
       "description": "Default strategy prioritizes Camelot-compatible keys in suggestions.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Select track with key 8A",
         "Verify top suggestions are predominantly 8A, 7A, 9A, or 8B"
@@ -283,7 +283,7 @@
       "category": "suggestions",
       "name": "Energy Arc Strategy",
       "description": "Energy arc strategy targets energy levels based on set position (build up → peak → cool down).",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Set strategy to Energy Arc",
         "Build sequence of 10 tracks",
@@ -297,7 +297,7 @@
       "category": "suggestions",
       "name": "Discovery Strategy",
       "description": "Discovery strategy boosts rarely-used tracks in suggestions.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Mark some tracks as frequently used",
         "Set strategy to Discovery",
@@ -310,7 +310,7 @@
       "category": "suggestions",
       "name": "Groove Lock Strategy",
       "description": "Groove lock strategy strongly prefers tracks with the same groove type.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Select a four-on-floor track",
         "Set strategy to Groove Lock",
@@ -322,7 +322,7 @@
       "category": "suggestions",
       "name": "Contrast Strategy",
       "description": "Contrast strategy rewards energy and frequency differences for intentional variety.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Select a high-energy bass-heavy track",
         "Set strategy to Contrast",
@@ -334,7 +334,7 @@
       "category": "suggestions",
       "name": "BPM Range Filter",
       "description": "User can filter suggestions to a specific BPM range.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Set BPM filter to 125-132",
         "Get suggestions",
@@ -346,7 +346,7 @@
       "category": "suggestions",
       "name": "Key Lock Filter",
       "description": "Key lock filter restricts suggestions to harmonically compatible keys only.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Select track with key 8A",
         "Enable key lock",
@@ -358,7 +358,7 @@
       "category": "suggestions",
       "name": "Diversity Bonus",
       "description": "Suggestions include a diversity bonus for tracks from different clusters than recently played.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Build sequence of 5 tracks all from same cluster",
         "Verify suggestions boost tracks from other clusters",
@@ -370,7 +370,7 @@
       "category": "suggestions",
       "name": "Weight Customization",
       "description": "User can adjust the relative weights of harmonic, BPM, energy, groove, frequency, and mix quality in scoring.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Open settings",
         "Change harmonic weight from 0.30 to 0.50",
@@ -700,7 +700,7 @@
       "category": "export",
       "name": "M3U Export",
       "description": "Current sequence can be exported as an M3U playlist file referencing local audio file paths.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Build sequence of 5+ tracks",
         "Click Export → M3U",
@@ -714,7 +714,7 @@
       "category": "export",
       "name": "Rekordbox XML Export",
       "description": "Current sequence can be exported as Rekordbox-compatible XML playlist.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Build sequence of 5+ tracks",
         "Click Export → Rekordbox",
@@ -728,7 +728,7 @@
       "category": "export",
       "name": "CSV Export",
       "description": "Full library analysis data can be exported as CSV with all metrics.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Click Export → CSV",
         "Choose save location",
@@ -742,7 +742,7 @@
       "category": "export",
       "name": "Save/Load Graph State",
       "description": "Current graph state (node positions, sequence, settings) can be saved and reloaded.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Arrange nodes on canvas",
         "Build a sequence",

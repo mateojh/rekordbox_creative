@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+import mutagen
+
 from rekordbox_creative.db.models import TrackMetadata
 
 logger = logging.getLogger(__name__)
@@ -21,8 +23,6 @@ class MetadataExtractor:
         """
         file_path = Path(file_path)
         try:
-            import mutagen
-
             audio = mutagen.File(str(file_path), easy=True)
             if audio is None:
                 return TrackMetadata()

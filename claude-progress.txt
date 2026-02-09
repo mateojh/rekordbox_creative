@@ -3,12 +3,63 @@
 # See docs/AGENT_WORKFLOWS.md for format details
 
 ## Current State
-- Last session: Not started
-- Features passing: 0/62
-- Last feature implemented: None
-- Current blocker: Project not yet initialized (need initializer agent run)
+- Last session: 2026-02-09
+- Features passing: 32/62
+- Last feature implemented: EXP-004 (Save/Load Graph State)
+- Current blocker: None — all backend features complete, UI layer not started
 
 ## Session Log
+
+### Session 2 — 2026-02-09 (Long-running implementation)
+- Fixed: 10 test failures from previous session
+  - 6 metadata tests: moved `import mutagen` to module level in analysis/metadata.py
+  - 4 scoring boundary tests: added _EPS=1e-9 float tolerance in graph/scoring.py
+- Implemented: Phase 4 — Graph Engine Core
+  - GRAPH-001: TrackGraph class (NetworkX DiGraph wrapper) in graph/graph.py
+  - GRAPH-002: Edge computation with threshold filtering + incremental computation
+  - GRAPH-006: DBSCAN clustering with 7D feature vectors, auto-labeling in graph/clustering.py
+  - GRAPH-007: Force-directed layout (spring_layout) in graph/layout.py
+  - GRAPH-008: Scatter map layout (t-SNE projection) in graph/layout.py
+  - GRAPH-009: Greedy nearest-neighbor pathfinding in graph/pathfinding.py
+  - GRAPH-010: 2-opt improvement for set ordering in graph/pathfinding.py
+- Implemented: Phase 5 — Suggestion Engine
+  - SUG-001: SuggestionEngine with full pipeline in suggestions/engine.py
+  - SUG-002: Sequence-aware suggestions (context modifier)
+  - SUG-003: Harmonic Flow strategy (default, modifier=1.0)
+  - SUG-004: Energy Arc strategy (target energy by set position)
+  - SUG-005: Discovery strategy (boost rarely-used tracks)
+  - SUG-006: Groove Lock strategy (same groove 1.2x, different 0.6x)
+  - SUG-007: Contrast strategy (reward energy/frequency differences)
+  - SUG-008: BPM Range filter
+  - SUG-009: Key Lock filter (harmonic_score >= 0.4)
+  - SUG-010: Diversity bonus (cluster diversity)
+  - SUG-011: Weight customization (via SuggestionConfig)
+- Implemented: Export Layer
+  - EXP-001: M3U export with EXTINF metadata in export/m3u.py
+  - EXP-002: Rekordbox XML export with DJ_PLAYLISTS format in export/rekordbox.py
+  - EXP-003: CSV export with all 24 analysis columns in export/csv.py
+  - EXP-004: Save/Load via GraphState JSON serialization (Pydantic model_dump_json)
+  - Shared utilities in export/playlist.py (resolve_tracks, format_duration)
+- Tests written:
+  - test_clustering.py: 20 tests (feature vectors, DBSCAN, labeling, cluster objects)
+  - test_pathfinding.py: 21 tests (greedy, 2-opt, optimal_order, total_compatibility)
+  - test_suggestions.py: 44 tests (strategies, filters, context modifier, diversity, engine)
+  - test_export.py: 36 tests (M3U, Rekordbox XML, CSV, GraphState round-trip)
+- All tests: 457 passed in 4.54s
+- Features marked passing: 32/62 (was 10/62)
+- Next suggested: Phase 6 — Desktop UI Shell (UI-001+)
+
+### Session 1 — Previous sessions
+- Created: Full documentation suite in docs/
+- Created: Project skeleton with all directories and placeholder files
+- Implemented: Phase 1 — Data Models & Storage (DB-001, DB-002)
+- Implemented: Phase 2 — Analysis Pipeline (SCAN-001 through SCAN-005)
+- Implemented: Phase 3 — Scoring Engine (GRAPH-003, GRAPH-004, GRAPH-005)
+- All Pydantic v2 models in db/models.py
+- SQLite CRUD in db/database.py (538 lines)
+- CacheManager in db/cache.py
+- Audio analysis pipeline: scanner.py, processor.py, metadata.py, cache_manager.py
+- 6-component weighted scoring in graph/scoring.py (338 lines)
 
 ### Session 0 — Project Setup
 - Created: Full documentation suite in docs/

@@ -9,14 +9,12 @@ import pytest
 
 from rekordbox_creative.db.models import (
     DJMetrics,
-    SuggestionConfig,
     SpotifyStyleMetrics,
+    SuggestionConfig,
     Track,
     TrackStructure,
 )
 from rekordbox_creative.graph.scoring import (
-    GROOVE_COMPATIBILITY,
-    FREQUENCY_COMPATIBILITY,
     bpm_score,
     camelot_distance,
     compute_compatibility,
@@ -27,7 +25,6 @@ from rekordbox_creative.graph.scoring import (
     mix_quality_score,
     parse_camelot,
 )
-
 
 # ===================================================================
 # Helpers: parse_camelot and camelot_distance
