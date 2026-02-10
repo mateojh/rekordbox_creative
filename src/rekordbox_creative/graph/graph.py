@@ -111,6 +111,24 @@ class TrackGraph:
     # Edge computation
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _bpm_compatible(bpm_a: float, bpm_b: float, max_ratio: float = 0.12) -> bool:
+        """Quick BPM pre-filter: skip pairs that are obviously too far apart.
+
+        Checks within ±max_ratio, plus half/double time.
+        Used to reduce O(n²) edge computation for large libraries (PERF-001).
+        """
+        if bpm_a <= 0 or bpm_b <= 0:
+            return True
+        ratio = max(bpm_a, bpm_b) / min(bpm_a, bpm_b)
+        # Normal range
+        if ratio <= 1.0 + max_ratio:
+            return True
+        # Half/double time
+        if 1.90 <= ratio <= 2.10:
+            return True
+        return False
+
     def compute_edges(
         self,
         threshold: float = 0.3,
@@ -119,6 +137,7 @@ class TrackGraph:
         """Compute compatibility edges between all node pairs.
 
         Only stores edges with score >= threshold.
+        Uses BPM pre-filtering for large libraries (PERF-001).
         Returns list of newly created edges.
         """
         nodes = self.get_all_nodes()
@@ -130,6 +149,12 @@ class TrackGraph:
                     continue
                 # Skip if edge already exists
                 if self._graph.has_edge(track_a.id, track_b.id):
+                    continue
+
+                # BPM pre-filter (PERF-001): skip obviously incompatible pairs
+                if not self._bpm_compatible(
+                    track_a.dj_metrics.bpm, track_b.dj_metrics.bpm
+                ):
                     continue
 
                 score, scores = compute_compatibility(track_a, track_b, config)
@@ -154,6 +179,7 @@ class TrackGraph:
         """Compute edges only for new tracks against all existing nodes.
 
         Incremental computation: new_tracks x all_nodes (both directions).
+        Uses BPM pre-filtering for large libraries (PERF-001).
         """
         all_nodes = self.get_all_nodes()
         new_ids = {t.id for t in new_tracks}
@@ -162,6 +188,12 @@ class TrackGraph:
         for new_track in new_tracks:
             for existing_track in all_nodes:
                 if new_track.id == existing_track.id:
+                    continue
+
+                # BPM pre-filter (PERF-001)
+                if not self._bpm_compatible(
+                    new_track.dj_metrics.bpm, existing_track.dj_metrics.bpm
+                ):
                     continue
 
                 # new -> existing

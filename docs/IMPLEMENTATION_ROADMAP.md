@@ -16,13 +16,13 @@ For implementation details, see: `ALGORITHM_SPEC.md` (formulas), `DATA_MODELS.md
 | 3 | Scoring Engine | 3 features | Complete (3/3) |
 | 4 | Graph Engine Core | 5 features | Complete (5/5) |
 | 5 | Suggestion Engine | 11 features | Complete (11/11) |
-| 6 | Desktop UI Shell | 8 features | Not started |
-| 7 | UI Interaction & Panels | 10 features | Not started |
-| 8 | Set Building & Export | 9 features | Partial (4/9 — EXP done, SET not started) |
-| 9 | Performance & Optimization | 3 features | Not started |
-| 10 | Preferences & Polish | 2 features | Not started |
-| 11 | Packaging & Distribution | 2 features | Not started |
-| **Total** | | **62 features** | **32/62 passing** |
+| 6 | Desktop UI Shell | 8 features | Complete (8/8) |
+| 7 | UI Interaction & Panels | 10 features | Complete (10/10) |
+| 8 | Set Building & Export | 9 features | Complete (9/9) |
+| 9 | Performance & Optimization | 3 features | Complete (3/3) |
+| 10 | Preferences & Polish | 2 features | Complete (2/2) |
+| 11 | Packaging & Distribution | 2 features | Complete (2/2) |
+| **Total** | | **62 features** | **62/62 passing** |
 
 ---
 

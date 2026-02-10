@@ -172,37 +172,40 @@ class TestAudioScanner:
 # SCAN-002: Batch Analysis / AudioProcessor (mocked)
 # ===================================================================
 
-def _make_mock_analysis_result() -> dict:
-    """Return a realistic audio_analyzer output dict."""
-    return {
-        "duration": 300.0,
-        "spotify_style": {
-            "energy": 0.75,
-            "danceability": 0.80,
-            "acousticness": 0.10,
-            "instrumentalness": 0.60,
-            "valence": 0.55,
-            "liveness": 0.15,
-        },
-        "dj_metrics": {
-            "bpm": 128.0,
-            "bpm_stability": 0.95,
-            "key": "8A",
-            "key_confidence": 0.88,
-            "mix_in_score": 0.85,
-            "mix_out_score": 0.80,
-            "frequency_weight": "bass_heavy",
-            "groove_type": "four_on_floor",
-        },
-        "structure": {
-            "drops": [64.0, 192.0],
-            "breakdowns": [[96.0, 128.0]],
-            "vocal_segments": [[32.0, 64.0]],
-            "build_sections": [[48.0, 64.0]],
-            "intro_end": 16.0,
-            "outro_start": 280.0,
-        },
-    }
+def _make_mock_analysis_result():
+    """Return a realistic audio_analyzer output (Pydantic-like with attribute access)."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        duration_seconds=300.0,
+        sample_rate=22050,
+        spotify_style=SimpleNamespace(
+            energy=0.75,
+            danceability=0.80,
+            acousticness=0.10,
+            instrumentalness=0.60,
+            valence=0.55,
+            liveness=0.15,
+        ),
+        dj_metrics=SimpleNamespace(
+            bpm=128.0,
+            bpm_stability=0.95,
+            key="8A",
+            key_confidence=0.88,
+            mix_in_score=0.85,
+            mix_out_score=0.80,
+            frequency_weight="bass_heavy",
+            groove_type="four_on_floor",
+        ),
+        structure=SimpleNamespace(
+            drops=[64.0, 192.0],
+            breakdowns=[[96.0, 128.0]],
+            vocal_segments=[[32.0, 64.0]],
+            build_sections=[[48.0, 64.0]],
+            intro_end=16.0,
+            outro_start=280.0,
+        ),
+    )
 
 
 class TestAudioProcessor:
@@ -233,12 +236,30 @@ class TestAudioProcessor:
 
     @patch("rekordbox_creative.analysis.processor.compute_file_hash")
     @patch("audio_analyzer.AudioAnalyzer")
-    def test_analyze_file_default_values(
+    def test_analyze_file_minimal_values(
         self, mock_analyzer_cls: MagicMock, mock_hash: MagicMock, tmp_path: Path
     ) -> None:
-        """Missing fields in analyzer output get reasonable defaults."""
+        """Analyzer returning minimal values produces a valid Track."""
+        from types import SimpleNamespace
+
         mock_instance = MagicMock()
-        mock_instance.analyze.return_value = {}  # Empty result
+        mock_instance.analyze.return_value = SimpleNamespace(
+            duration_seconds=0.0,
+            sample_rate=22050,
+            spotify_style=SimpleNamespace(
+                energy=0.5, danceability=0.5, acousticness=0.0,
+                instrumentalness=0.0, valence=0.5, liveness=0.0,
+            ),
+            dj_metrics=SimpleNamespace(
+                bpm=120.0, bpm_stability=0.5, key="1A", key_confidence=0.5,
+                mix_in_score=0.5, mix_out_score=0.5,
+                frequency_weight="balanced", groove_type="straight",
+            ),
+            structure=SimpleNamespace(
+                drops=[], breakdowns=[], vocal_segments=[],
+                build_sections=[], intro_end=None, outro_start=None,
+            ),
+        )
         mock_analyzer_cls.return_value = mock_instance
         mock_hash.return_value = "hash000"
 
@@ -246,9 +267,9 @@ class TestAudioProcessor:
         processor = AudioProcessor()
         track = processor.analyze_file(audio_file)
 
-        assert track.dj_metrics.bpm == 120.0  # default
-        assert track.dj_metrics.key == "1A"  # default
-        assert track.spotify_style.energy == 0.5  # default
+        assert track.dj_metrics.bpm == 120.0
+        assert track.dj_metrics.key == "1A"
+        assert track.spotify_style.energy == 0.5
         assert track.duration_seconds == 0.0
 
     @patch("rekordbox_creative.analysis.processor.compute_file_hash")

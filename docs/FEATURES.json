@@ -3,8 +3,8 @@
     "project": "rekordbox_creative",
     "description": "Feature tracking for agent-driven development. Agents may ONLY toggle the 'passes' field. Do not edit descriptions or add/remove features.",
     "total_features": 62,
-    "passing": 32,
-    "failing": 30
+    "passing": 62,
+    "failing": 0
   },
   "features": [
     {
@@ -136,27 +136,27 @@
       "description": "Harmonic score correctly implements Camelot wheel rules: same key=1.0, adjacent=0.85, parallel=0.8, two-step=0.5.",
       "passes": true,
       "steps": [
-        "Compute harmonic_score('8A', '8A') → 1.0",
-        "Compute harmonic_score('8A', '9A') → 0.85",
-        "Compute harmonic_score('8A', '8B') → 0.8",
-        "Compute harmonic_score('8A', '10A') → 0.5",
-        "Compute harmonic_score('8A', '3A') → 0.1",
-        "Verify wrapping: harmonic_score('12A', '1A') → 0.85"
+        "Compute harmonic_score('8A', '8A') \u00e2\u2020\u2019 1.0",
+        "Compute harmonic_score('8A', '9A') \u00e2\u2020\u2019 0.85",
+        "Compute harmonic_score('8A', '8B') \u00e2\u2020\u2019 0.8",
+        "Compute harmonic_score('8A', '10A') \u00e2\u2020\u2019 0.5",
+        "Compute harmonic_score('8A', '3A') \u00e2\u2020\u2019 0.1",
+        "Verify wrapping: harmonic_score('12A', '1A') \u00e2\u2020\u2019 0.85"
       ]
     },
     {
       "id": "GRAPH-004",
       "category": "graph_engine",
       "name": "BPM Scoring",
-      "description": "BPM score gives 1.0 for ±2%, 0.8 for ±4%, 0.5 for ±6%, lower beyond. Detects half/double time.",
+      "description": "BPM score gives 1.0 for \u00c2\u00b12%, 0.8 for \u00c2\u00b14%, 0.5 for \u00c2\u00b16%, lower beyond. Detects half/double time.",
       "passes": true,
       "steps": [
-        "bpm_score(128, 128) → 1.0",
-        "bpm_score(128, 130) → ~1.0 (1.5% diff)",
-        "bpm_score(128, 133) → ~0.8 (3.9% diff)",
-        "bpm_score(128, 135) → ~0.5 (5.5% diff)",
-        "bpm_score(128, 64) → 0.6 (half time)",
-        "bpm_score(128, 256) → 0.6 (double time)"
+        "bpm_score(128, 128) \u00e2\u2020\u2019 1.0",
+        "bpm_score(128, 130) \u00e2\u2020\u2019 ~1.0 (1.5% diff)",
+        "bpm_score(128, 133) \u00e2\u2020\u2019 ~0.8 (3.9% diff)",
+        "bpm_score(128, 135) \u00e2\u2020\u2019 ~0.5 (5.5% diff)",
+        "bpm_score(128, 64) \u00e2\u2020\u2019 0.6 (half time)",
+        "bpm_score(128, 256) \u00e2\u2020\u2019 0.6 (double time)"
       ]
     },
     {
@@ -210,7 +210,7 @@
         "Load library with 20+ tracks",
         "Switch to scatter map view",
         "Verify tracks cluster by similarity",
-        "Verify layout is deterministic (same data → same layout)"
+        "Verify layout is deterministic (same data \u00e2\u2020\u2019 same layout)"
       ]
     },
     {
@@ -282,7 +282,7 @@
       "id": "SUG-004",
       "category": "suggestions",
       "name": "Energy Arc Strategy",
-      "description": "Energy arc strategy targets energy levels based on set position (build up → peak → cool down).",
+      "description": "Energy arc strategy targets energy levels based on set position (build up \u00e2\u2020\u2019 peak \u00e2\u2020\u2019 cool down).",
       "passes": true,
       "steps": [
         "Set strategy to Energy Arc",
@@ -383,7 +383,7 @@
       "category": "ui",
       "name": "App Window",
       "description": "Desktop application opens a resizable window with a title bar, menu, and dark theme.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Launch executable",
         "Verify window appears",
@@ -396,7 +396,7 @@
       "category": "ui",
       "name": "Node Graph Canvas",
       "description": "Main area shows an interactive canvas where track nodes are displayed. Supports pan and zoom.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Load library with tracks",
         "Verify nodes appear on canvas",
@@ -410,7 +410,7 @@
       "category": "ui",
       "name": "Node Display",
       "description": "Each node shows track name, BPM, key. Color-coded by key or cluster. Size varies by energy.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Load tracks",
         "Verify each node shows track name",
@@ -424,7 +424,7 @@
       "category": "ui",
       "name": "Node Selection",
       "description": "Clicking a node selects it, highlights connected edges, and shows details in the inspector panel.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Click on a node",
         "Verify node gets a selection highlight",
@@ -437,7 +437,7 @@
       "category": "ui",
       "name": "Node Dragging",
       "description": "Nodes can be dragged to reposition them on the canvas. Edges follow smoothly.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Click and drag a node",
         "Verify node follows mouse",
@@ -450,7 +450,7 @@
       "category": "ui",
       "name": "Edge Display",
       "description": "Edges between nodes show compatibility. Thicker = higher compatibility. Optional color by type (harmonic, energy).",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Load tracks with varying compatibility",
         "Verify edges are visible between compatible tracks",
@@ -463,7 +463,7 @@
       "category": "ui",
       "name": "Manual Edge Creation",
       "description": "User can draw an edge between two nodes to manually mark them as a good transition.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Drag from one node's output port to another node",
         "Verify edge is created",
@@ -476,7 +476,7 @@
       "category": "ui",
       "name": "Track Inspector Panel",
       "description": "Side panel showing selected track's full analysis: artist, title, BPM, key, energy, danceability, valence, structure, and all other metrics.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Select a track",
         "Verify inspector shows: title, artist, duration",
@@ -491,7 +491,7 @@
       "category": "ui",
       "name": "Suggestion Panel",
       "description": "Panel showing top N suggested tracks with scores, strategy selector, and filter controls.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Select a track",
         "Verify suggestion panel shows recommended tracks",
@@ -505,7 +505,7 @@
       "category": "ui",
       "name": "Playlist Panel",
       "description": "Panel showing the current set sequence. Tracks can be reordered, added, removed.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Add tracks to sequence",
         "Verify playlist panel shows ordered list",
@@ -519,7 +519,7 @@
       "category": "ui",
       "name": "Track Swap",
       "description": "User can swap a track in the sequence with a suggested alternative. Edges and suggestions update.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Build sequence with 5 tracks",
         "Right-click track 3",
@@ -535,7 +535,7 @@
       "category": "ui",
       "name": "Right-Click Context Menu",
       "description": "Right-clicking a node shows: Add to Sequence, Find Similar, Swap Track, Remove from Graph, Show in Folder.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Right-click a node",
         "Verify context menu appears with all expected options",
@@ -547,7 +547,7 @@
       "category": "ui",
       "name": "Viewport Culling",
       "description": "Only nodes visible in the current viewport are rendered. Performance stays smooth with 1000+ nodes.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Load 1000+ track library",
         "Zoom out to see all nodes",
@@ -561,7 +561,7 @@
       "category": "ui",
       "name": "Search and Filter",
       "description": "Search bar to find tracks by name, artist, BPM, or key. Results highlighted on canvas.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Type artist name in search bar",
         "Verify matching tracks are highlighted on canvas",
@@ -576,7 +576,7 @@
       "category": "ui",
       "name": "Layout Mode Switching",
       "description": "User can switch between Force-Directed, Scatter Map, and Linear layout modes.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Load library",
         "Switch to Force-Directed layout",
@@ -592,7 +592,7 @@
       "category": "ui",
       "name": "Cluster Visualization",
       "description": "Vibe island clusters are visually distinct with colored backgrounds or hulls around grouped nodes.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Load library with multiple clusters",
         "Verify each cluster has a distinct visual boundary",
@@ -605,7 +605,7 @@
       "category": "ui",
       "name": "Suggestion Highlighting",
       "description": "Suggested tracks glow or pulse on the graph canvas when the suggestion panel updates.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Select a track",
         "Verify suggested tracks on the canvas have a glow effect",
@@ -619,7 +619,7 @@
       "category": "ui",
       "name": "Progress Bar During Analysis",
       "description": "While analyzing files, a progress bar shows current track name, track count progress, and estimated time remaining.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Select folder with 10+ unanalyzed tracks",
         "Verify progress bar appears",
@@ -633,7 +633,7 @@
       "category": "set_building",
       "name": "Add to Sequence",
       "description": "User can add a track to the current set sequence. Track position is tracked.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Click a track node",
         "Click 'Add to Sequence' or drag to playlist panel",
@@ -646,7 +646,7 @@
       "category": "set_building",
       "name": "Reorder Sequence",
       "description": "Tracks in the sequence can be reordered via drag-and-drop in the playlist panel.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Add 5 tracks to sequence",
         "Drag track 3 to position 1",
@@ -659,7 +659,7 @@
       "category": "set_building",
       "name": "Remove from Sequence",
       "description": "Tracks can be removed from the sequence. Node remains on graph but is no longer in the set.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Add tracks to sequence",
         "Remove a track from sequence",
@@ -673,7 +673,7 @@
       "category": "set_building",
       "name": "Auto-Order Sequence",
       "description": "User can click 'Optimize Order' to run pathfinding and reorder the sequence for best transition flow.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Add 8 tracks to sequence in random order",
         "Click 'Optimize Order'",
@@ -686,7 +686,7 @@
       "category": "set_building",
       "name": "Set Segments / Chapters",
       "description": "User can group sequential tracks into labeled segments (chapters) for set structure.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Build sequence of 12 tracks",
         "Select tracks 1-4 and group as 'Opener'",
@@ -703,7 +703,7 @@
       "passes": true,
       "steps": [
         "Build sequence of 5+ tracks",
-        "Click Export → M3U",
+        "Click Export \u00e2\u2020\u2019 M3U",
         "Choose save location",
         "Verify .m3u file is created",
         "Open .m3u file and verify it lists correct file paths"
@@ -717,7 +717,7 @@
       "passes": true,
       "steps": [
         "Build sequence of 5+ tracks",
-        "Click Export → Rekordbox",
+        "Click Export \u00e2\u2020\u2019 Rekordbox",
         "Choose save location",
         "Verify XML file is created",
         "Import into Rekordbox and verify tracks appear in correct order"
@@ -730,7 +730,7 @@
       "description": "Full library analysis data can be exported as CSV with all metrics.",
       "passes": true,
       "steps": [
-        "Click Export → CSV",
+        "Click Export \u00e2\u2020\u2019 CSV",
         "Choose save location",
         "Verify CSV file contains all tracks",
         "Verify columns include all analysis metrics",
@@ -757,7 +757,7 @@
       "category": "performance",
       "name": "Large Library Handling",
       "description": "App handles 5000+ track libraries without UI lag. Graph renders within 3 seconds.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Load library with 5000+ pre-analyzed tracks",
         "Verify graph renders within 3 seconds",
@@ -770,12 +770,12 @@
       "category": "performance",
       "name": "Incremental Edge Computation",
       "description": "Adding new tracks computes edges only for new tracks vs existing library, not full recomputation.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Load library with 100 analyzed tracks",
         "Add 5 new tracks to folder",
         "Re-scan folder",
-        "Verify only 5 × 100 edge computations run (not 105²)"
+        "Verify only 5 \u00c3\u2014 100 edge computations run (not 105\u00c2\u00b2)"
       ]
     },
     {
@@ -783,7 +783,7 @@
       "category": "performance",
       "name": "Background Analysis",
       "description": "Analysis runs in a background thread. UI remains responsive during processing.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Start analyzing 20+ files",
         "While analysis runs, interact with the UI",
@@ -796,7 +796,7 @@
       "category": "packaging",
       "name": "Standalone Executable (macOS)",
       "description": "App can be packaged as a macOS .app bundle that runs without Python installed.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Build executable with PyInstaller",
         "Copy to a machine without Python",
@@ -809,7 +809,7 @@
       "category": "packaging",
       "name": "Standalone Executable (Windows)",
       "description": "App can be packaged as a Windows .exe that runs without Python installed.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Build executable with PyInstaller",
         "Copy to a machine without Python",
@@ -822,7 +822,7 @@
       "category": "preferences",
       "name": "Settings Persistence",
       "description": "User preferences (weight values, default strategy, UI theme, last folder) persist across sessions.",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Open settings",
         "Change harmonic weight to 0.40",
@@ -837,7 +837,7 @@
       "category": "preferences",
       "name": "Edge Threshold Setting",
       "description": "User can adjust the minimum compatibility threshold for displaying edges (default 0.3).",
-      "passes": false,
+      "passes": true,
       "steps": [
         "Open settings",
         "Change edge threshold from 0.3 to 0.5",

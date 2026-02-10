@@ -26,7 +26,7 @@ class Database:
 
     def __init__(self, db_path: Path | str = ":memory:") -> None:
         self._db_path = str(db_path)
-        self._conn = sqlite3.connect(self._db_path)
+        self._conn = sqlite3.connect(self._db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA foreign_keys=ON")
@@ -318,6 +318,40 @@ class Database:
         if row is None:
             return None
         return self._row_to_edge(row)
+
+    def insert_edges_batch(self, edges: list[Edge]) -> None:
+        """Insert many edges in a single transaction (PERF-001)."""
+        if not edges:
+            return
+        self._conn.executemany(
+            """
+            INSERT OR IGNORE INTO edges (
+                id, source_id, target_id, compatibility_score,
+                harmonic_score, bpm_score, energy_score,
+                groove_score, frequency_score, mix_quality_score,
+                is_user_created
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (
+                    str(e.id), str(e.source_id), str(e.target_id),
+                    e.compatibility_score,
+                    e.scores.harmonic, e.scores.bpm, e.scores.energy,
+                    e.scores.groove, e.scores.frequency, e.scores.mix_quality,
+                    1 if e.is_user_created else 0,
+                )
+                for e in edges
+            ],
+        )
+        self._conn.commit()
+
+    def get_edges_above_threshold(self, threshold: float) -> list[Edge]:
+        """Get edges with compatibility score >= threshold (PERF-001)."""
+        rows = self._conn.execute(
+            "SELECT * FROM edges WHERE compatibility_score >= ?",
+            (threshold,),
+        ).fetchall()
+        return [self._row_to_edge(r) for r in rows]
 
     def delete_edges_for_track(self, track_id: UUID) -> None:
         """Delete all edges connected to a track."""
