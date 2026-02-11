@@ -225,22 +225,40 @@ Current track (or last N tracks in sequence)
 
 **Purpose**: Desktop GUI presenting the node graph canvas and all user interaction.
 
-**Components**:
-- `ui/app.py` — Application entry point and window management
-- `ui/canvas.py` — Node graph canvas (pan, zoom, drag)
-- `ui/nodes.py` — Track node rendering (color-coded by key/energy/cluster)
-- `ui/edges.py` — Edge rendering (thickness = compatibility, color = type)
-- `ui/panels/` — Side panels (track inspector, suggestions, playlist, settings)
-- `ui/dialogs/` — File picker, export, preferences
+**Architecture**: PyQt6 desktop shell with Sigma.js (WebGL) graph canvas embedded via QWebEngineView. Python and JavaScript communicate bidirectionally through QWebChannel.
+
+**Python Components**:
+- `ui/app.py` — Application entry point, main window, panel orchestration
+- `ui/web/web_canvas.py` — `WebGraphCanvas(QWebEngineView)` — drop-in replacement for old QGraphicsView canvas, same signal interface
+- `ui/web/bridge.py` — `GraphBridge(QObject)` — Python-side QWebChannel bridge with pyqtSlot methods
+- `ui/web/serializers.py` — Track/Edge/Position to JSON serializers for Sigma.js
+- `ui/panels/` — Side panels (inspector, suggestions, playlist, settings) — PyQt6 widgets with glassmorphism CSS
+- `ui/dialogs/` — File picker, export dialogs
+
+**JavaScript Components** (in `ui/web/assets/`):
+- `js/graph.js` — `GraphEngine` class wrapping Sigma.js + Graphology (nodeReducer/edgeReducer for dynamic styling)
+- `js/bridge.js` — JS-side QWebChannel initialization, creates `window.graphEngine`
+- `js/colors.js` — Camelot 12-hue color system (minor=saturated, major=lightened 40%)
+- `js/interactions.js` — Click, hover, drag, context menu, tooltip handlers
+- `js/minimap.js` — Canvas-based navigation minimap (bottom-right)
+- `js/camelot-wheel.js` — Interactive SVG Camelot wheel overlay (top-left)
+- `js/energy-flow.js` — Energy trajectory sparkline for sequences (bottom-left)
+- `js/filters.js` — In-graph key/BPM filter controls (top-right)
+- `vendor/` — Pre-bundled sigma.min.js, graphology.umd.min.js
+
+**Communication Protocol**:
+- Python → JS: `page().runJavaScript()` calls (`loadGraph`, `updatePositions`, `highlightNodes`, etc.)
+- JS → Python: QWebChannel bridge slots (`on_node_click`, `on_node_dblclick`, `on_canvas_click`, etc.)
+- Calls queued in `_pending_calls` until JS signals ready via `bridge.js_ready`
 
 **Interaction Model**:
-- Click node → Select track, show details in inspector panel
-- Drag node → Reposition on canvas
-- Draw edge (drag from node port) → Manually connect two tracks
-- Right-click node → Context menu (add to playlist, find similar, remove)
-- Double-click canvas → Add track from library browser
-- Scroll → Zoom canvas
-- Middle-click drag → Pan canvas
+- Click node → Select track, show details in inspector panel, update Camelot wheel
+- Drag node → Reposition on canvas (WebGL, 60fps)
+- Right-click node → Context menu (add to playlist, find similar, swap, show in folder)
+- Double-click node → Add to sequence, update energy flow sparkline
+- Scroll → Zoom canvas (Sigma.js camera)
+- Click+drag canvas → Pan
+- Filter bar → Key chips and BPM range for quick graph filtering
 
 ### Layer 6: Export Layer
 
@@ -288,10 +306,11 @@ Current track (or last N tracks in sequence)
 | Audio analysis | `audio_analyzer` | Purpose-built for DJ metrics, open source |
 | Database | SQLite | Zero-config, single-file, ships with Python |
 | Graph library | NetworkX | Mature, well-documented, handles 10K+ nodes |
-| GUI framework | TBD (see UI_SPEC.md) | PyQt6, Tauri, or Electron candidates |
+| GUI framework | PyQt6 + QWebEngineView | Native desktop shell with embedded Chromium for WebGL graph |
+| Graph rendering | Sigma.js v2.4.0 + Graphology | WebGL-accelerated, handles 10K+ nodes at 60fps |
 | Clustering | scikit-learn DBSCAN | Already a dependency of audio_analyzer |
-| Layout | Custom force-directed | Fine-tuned for music compatibility distances |
-| Packaging | PyInstaller | Single executable, bundles Python runtime |
+| Layout | NetworkX spring_layout + t-SNE | Python-side computation, animated transitions in JS |
+| Packaging | PyInstaller | Single executable, bundles Python runtime + web assets |
 | Metadata | mutagen | Reads ID3, FLAC, MP4, Ogg tags |
 
 ## Directory Structure (Target)
@@ -353,9 +372,29 @@ rekordbox_creative/
 │       └── ui/
 │           ├── __init__.py
 │           ├── app.py
-│           ├── canvas.py
-│           ├── nodes.py
-│           ├── edges.py
+│           ├── canvas.py              # Legacy (unused, kept for reference)
+│           ├── nodes.py               # Legacy
+│           ├── edges.py               # Legacy
+│           ├── web/                   # Sigma.js WebGL graph canvas
+│           │   ├── __init__.py
+│           │   ├── web_canvas.py      # WebGraphCanvas(QWebEngineView)
+│           │   ├── bridge.py          # GraphBridge(QObject) — QWebChannel
+│           │   ├── serializers.py     # Track/Edge/Position → JSON
+│           │   └── assets/
+│           │       ├── index.html     # HTML scaffold
+│           │       ├── css/theme.css  # Dark glassmorphism CSS
+│           │       ├── js/
+│           │       │   ├── graph.js         # GraphEngine (Sigma.js wrapper)
+│           │       │   ├── bridge.js        # JS-side QWebChannel init
+│           │       │   ├── colors.js        # Camelot color system
+│           │       │   ├── interactions.js  # Click/hover/drag/tooltip
+│           │       │   ├── minimap.js       # Navigation minimap
+│           │       │   ├── camelot-wheel.js # SVG key wheel overlay
+│           │       │   ├── energy-flow.js   # Energy sparkline
+│           │       │   └── filters.js       # Key/BPM filter bar
+│           │       └── vendor/
+│           │           ├── sigma.min.js
+│           │           └── graphology.umd.min.js
 │           ├── panels/
 │           │   ├── __init__.py
 │           │   ├── inspector.py
@@ -375,6 +414,7 @@ rekordbox_creative/
     ├── test_suggestions.py
     ├── test_scanner.py
     ├── test_export.py
+    ├── test_web_bridge.py     # Serialization layer tests
     └── fixtures/
         └── sample_analysis.json
 ```

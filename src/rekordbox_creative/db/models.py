@@ -256,6 +256,25 @@ class SuggestionConfig(BaseModel):
         }
 
 
+class EnergyProfile(str, Enum):
+    """Predefined energy curve profiles for smart set building."""
+    WARM_UP_PEAK_COOL = "warm_up_peak_cool"
+    HIGH_ENERGY = "high_energy"
+    CHILL_LOUNGE = "chill_lounge"
+    ROLLERCOASTER = "rollercoaster"
+    CUSTOM = "custom"
+
+
+class SetBuilderConfig(BaseModel):
+    """Configuration for smart set generation."""
+    start_track_id: UUID | None = None
+    target_minutes: int = 60
+    energy_profile: EnergyProfile = EnergyProfile.WARM_UP_PEAK_COOL
+    custom_energy_points: list[tuple[float, float]] = Field(default_factory=list)
+    tag_filter_ids: list[int] = Field(default_factory=list)
+    bpm_tolerance: float = 0.05  # ±5% BPM
+
+
 class SuggestionResult(BaseModel):
     """A single track suggestion with scoring breakdown."""
 

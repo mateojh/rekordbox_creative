@@ -131,8 +131,51 @@ class Database:
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS tags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                color TEXT NOT NULL DEFAULT '#888888'
+            );
+
+            CREATE TABLE IF NOT EXISTS track_tags (
+                track_id TEXT NOT NULL REFERENCES tracks(id),
+                tag_id INTEGER NOT NULL REFERENCES tags(id),
+                PRIMARY KEY(track_id, tag_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS waveforms (
+                track_id TEXT PRIMARY KEY REFERENCES tracks(id),
+                samples BLOB NOT NULL,
+                duration REAL NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS set_history (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                duration_minutes REAL,
+                track_count INTEGER,
+                avg_compatibility REAL,
+                energy_profile TEXT,
+                notes TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS set_history_tracks (
+                history_id TEXT NOT NULL REFERENCES set_history(id),
+                position INTEGER NOT NULL,
+                track_id TEXT NOT NULL REFERENCES tracks(id),
+                transition_score REAL,
+                PRIMARY KEY(history_id, position)
+            );
         """)
         self._conn.commit()
+
+        # Seed starter tags if tags table is empty
+        from rekordbox_creative.db.tags import TagStore
+        tag_store = TagStore(self._conn)
+        if not tag_store.get_all_tags():
+            tag_store.seed_starter_tags()
 
     # ------------------------------------------------------------------
     # Connection management

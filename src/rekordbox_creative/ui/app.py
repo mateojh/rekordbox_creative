@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
     QStatusBar,
     QTabWidget,
     QToolBar,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -35,44 +36,116 @@ from rekordbox_creative.db.models import (
     SuggestionStrategy,
     Track,
 )
+from rekordbox_creative.suggestions.set_generator import SetGenerator
 from rekordbox_creative.db.preferences import PreferencesManager
+from rekordbox_creative.db.history import HistoryStore
+from rekordbox_creative.db.tags import TagStore
 from rekordbox_creative.graph.graph import TrackGraph
 from rekordbox_creative.graph.layout import force_directed_layout, scatter_layout
 from rekordbox_creative.graph.pathfinding import optimal_order
 from rekordbox_creative.suggestions.engine import SuggestionEngine
-from rekordbox_creative.ui.canvas import GraphCanvas
+from rekordbox_creative.ui.web.web_canvas import WebGraphCanvas
 from rekordbox_creative.ui.dialogs.export import pick_export_path
 from rekordbox_creative.ui.dialogs.folder_picker import pick_music_folder
+from rekordbox_creative.analysis.waveform import WaveformCache
+from rekordbox_creative.analysis.artwork import batch_extract_artwork
+from rekordbox_creative.ui.panels.history import HistoryPanel
 from rekordbox_creative.ui.panels.inspector import InspectorPanel
+from rekordbox_creative.ui.panels.player import PlayerPanel
 from rekordbox_creative.ui.panels.playlist import PlaylistPanel
 from rekordbox_creative.ui.panels.settings import SettingsPanel
 from rekordbox_creative.ui.panels.suggestions import SuggestionPanel
 
 logger = logging.getLogger(__name__)
 
-# Dark theme stylesheet
+# Modern glassmorphism dark theme
 DARK_STYLESHEET = """
-QMainWindow { background: #1A1A2E; }
-QToolBar { background: #0F0F23; border: none; spacing: 4px; }
-QStatusBar { background: #0F0F23; color: #888888; font-size: 11px; }
-QMenuBar { background: #0F0F23; color: #E0E0E0; }
-QMenuBar::item:selected { background: #16213E; }
-QMenu { background: #0F0F23; color: #E0E0E0; border: 1px solid #333; }
-QMenu::item:selected { background: #00D4FF; color: #000; }
-QTabWidget::pane { background: #0F0F23; border: none; }
-QTabBar::tab {
-    background: #0F0F23; color: #888888;
-    padding: 6px 16px; border: none; border-bottom: 2px solid transparent;
+QMainWindow {
+    background: #07070b;
+    font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
 }
-QTabBar::tab:selected { color: #00D4FF; border-bottom: 2px solid #00D4FF; }
-QTabBar::tab:hover { color: #E0E0E0; }
-QSplitter::handle { background: #333; width: 2px; }
-QLineEdit {
-    background: #1A1A2E; color: #E0E0E0;
-    border: 1px solid #333; border-radius: 4px;
+QToolBar {
+    background: rgba(13, 17, 23, 0.95);
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    spacing: 6px;
     padding: 4px 8px;
 }
-QLineEdit:focus { border-color: #00D4FF; }
+QStatusBar {
+    background: rgba(13, 17, 23, 0.95);
+    color: #64748b;
+    font-size: 11px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 2px 8px;
+}
+QMenuBar {
+    background: rgba(13, 17, 23, 0.95);
+    color: #94a3b8;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 2px 0;
+}
+QMenuBar::item { padding: 4px 10px; border-radius: 4px; }
+QMenuBar::item:selected { background: rgba(0, 212, 255, 0.12); color: #f1f5f9; }
+QMenu {
+    background: rgba(22, 27, 34, 0.96);
+    color: #f1f5f9;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 4px;
+}
+QMenu::item {
+    padding: 6px 24px 6px 12px;
+    border-radius: 4px;
+}
+QMenu::item:selected { background: #00D4FF; color: #07070b; }
+QMenu::separator { height: 1px; background: rgba(255, 255, 255, 0.06); margin: 4px 8px; }
+QTabWidget::pane {
+    background: rgba(13, 17, 23, 0.92);
+    border: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+QTabBar::tab {
+    background: transparent;
+    color: #64748b;
+    padding: 8px 16px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+QTabBar::tab:selected {
+    color: #00D4FF;
+    border-bottom: 2px solid #00D4FF;
+}
+QTabBar::tab:hover { color: #f1f5f9; }
+QSplitter::handle {
+    background: rgba(255, 255, 255, 0.04);
+    width: 1px;
+}
+QLineEdit {
+    background: rgba(22, 27, 34, 0.8);
+    color: #f1f5f9;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+    selection-background-color: rgba(0, 212, 255, 0.3);
+}
+QLineEdit:focus { border-color: rgba(0, 212, 255, 0.5); }
+QLineEdit::placeholder { color: #475569; }
+QScrollArea { background: transparent; border: none; }
+QScrollBar:vertical {
+    background: transparent; width: 6px; margin: 0;
+}
+QScrollBar::handle:vertical {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px; min-height: 30px;
+}
+QScrollBar::handle:vertical:hover { background: rgba(255, 255, 255, 0.15); }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
 """
 
 
@@ -174,12 +247,15 @@ class MainWindow(QMainWindow):
         self._db_path = str(db_path) if db_path else "rekordbox_creative.db"
         self._db = Database(self._db_path)
         self._prefs = PreferencesManager(self._db)
+        self._tag_store = TagStore(self._db.connection)
+        self._history_store = HistoryStore(self._db.connection)
         self._graph = TrackGraph()
         self._suggestion_engine = SuggestionEngine()
         self._all_tracks: dict[UUID, Track] = {}
         self._sequence: list[Track] = []
         self._selected_track: Track | None = None
         self._worker: AnalysisWorker | None = None
+        self._last_positions: list = []  # list[NodePosition] from last layout
 
         logger.info("Setting up UI...")
         self._setup_menu_bar()
@@ -221,6 +297,13 @@ class MainWindow(QMainWindow):
         fit_action.triggered.connect(lambda: self._canvas.fit_all_nodes())
         view_menu.addAction(fit_action)
 
+        # Set menu
+        set_menu = menu.addMenu("&Set")
+        build_set_action = QAction("&Build Smart Set...", self)
+        build_set_action.setShortcut(QKeySequence("Ctrl+B"))
+        build_set_action.triggered.connect(self._on_build_smart_set)
+        set_menu.addAction(build_set_action)
+
         # Export menu
         export_menu = menu.addMenu("&Export")
         for fmt, label in [("m3u", "M3U Playlist"), ("xml", "Rekordbox XML"),
@@ -243,6 +326,13 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
+        # Build Smart Set button
+        build_set_btn = QAction("Build Set", self)
+        build_set_btn.triggered.connect(self._on_build_smart_set)
+        toolbar.addAction(build_set_btn)
+
+        toolbar.addSeparator()
+
         # Layout mode buttons
         for mode, label in [("force", "Force"), ("scatter", "Scatter")]:
             action = QAction(label, self)
@@ -254,14 +344,20 @@ class MainWindow(QMainWindow):
     def _setup_central(self) -> None:
         central = QWidget()
         self.setCentralWidget(central)
-        layout = QHBoxLayout(central)
+        outer_layout = QVBoxLayout(central)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+
+        # Top area: canvas + right panel
+        top_widget = QWidget()
+        layout = QHBoxLayout(top_widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # Canvas (center)
-        self._canvas = GraphCanvas()
+        # Canvas (center) — Sigma.js WebGL via QWebEngineView
+        self._canvas = WebGraphCanvas()
         self._canvas.node_selected.connect(self._on_node_selected)
         self._canvas.node_double_clicked.connect(self._on_node_double_clicked)
         self._canvas.node_context_menu.connect(self._on_context_menu)
@@ -278,18 +374,25 @@ class MainWindow(QMainWindow):
         self._playlist_panel = PlaylistPanel()
         self._settings_panel = SettingsPanel()
 
+        self._history_panel = HistoryPanel()
+        self._history_panel.set_history_store(self._history_store)
+
         self._right_tabs.addTab(self._inspector, "Inspector")
         self._right_tabs.addTab(self._suggestions_panel, "Suggest")
         self._right_tabs.addTab(self._playlist_panel, "Set")
+        self._right_tabs.addTab(self._history_panel, "History")
         self._right_tabs.addTab(self._settings_panel, "Settings")
 
         # Connect panel signals
+        self._inspector.tag_row.add_clicked.connect(self._on_tag_add)
+        self._inspector.tag_row.tag_removed.connect(self._on_tag_remove)
         self._suggestions_panel.strategy_changed.connect(self._on_strategy_changed)
         self._suggestions_panel.suggestion_clicked.connect(self._on_suggestion_clicked)
         self._playlist_panel.track_removed.connect(self._on_track_removed_from_set)
         self._playlist_panel.optimize_requested.connect(self._on_optimize_order)
         self._playlist_panel.clear_requested.connect(self._on_clear_set)
         self._playlist_panel.export_requested.connect(self._on_export)
+        self._history_panel.set_load_requested.connect(self._on_load_history_set)
         self._settings_panel.weights_changed.connect(self._on_weights_changed)
         self._settings_panel.threshold_changed.connect(self._on_threshold_changed)
         self._settings_panel.folder_requested.connect(self._on_open_folder)
@@ -300,16 +403,36 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(splitter)
 
+        outer_layout.addWidget(top_widget, stretch=1)
+
+        # Bottom: Player panel
+        self._player_panel = PlayerPanel()
+        self._player_panel.set_waveform_cache(
+            WaveformCache(self._db.connection)
+        )
+        self._player_panel.play_state_changed.connect(self._on_play_state_changed)
+        outer_layout.addWidget(self._player_panel)
+
         # Progress bar (hidden by default)
         self._progress_bar = QProgressBar()
         self._progress_bar.setFixedHeight(20)
         self._progress_bar.setVisible(False)
         self._progress_bar.setStyleSheet("""
             QProgressBar {
-                background: #1A1A2E; border: none;
-                text-align: center; color: #E0E0E0;
+                background: rgba(22, 27, 34, 0.8);
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                border-radius: 4px;
+                text-align: center;
+                color: #94a3b8;
+                font-size: 10px;
             }
-            QProgressBar::chunk { background: #00D4FF; }
+            QProgressBar::chunk {
+                background: qlineargradient(
+                    x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #00D4FF, stop:1 #0099cc
+                );
+                border-radius: 3px;
+            }
         """)
 
     def _setup_status_bar(self) -> None:
@@ -393,70 +516,83 @@ class MainWindow(QMainWindow):
             self._status_label.setText(f"Render error: {e}")
 
     def _render_graph(self) -> None:
-        """Populate the canvas with nodes and edges from the graph.
+        """Send the full graph to the Sigma.js WebGL renderer.
 
-        Optimized for large libraries (PERF-001): batched edge rendering,
-        per-node edge caps, skips cluster hulls for large libraries.
+        Optimized for large libraries (PERF-001): Sigma.js handles
+        WebGL rendering with built-in viewport culling and LOD.
         """
-        scene = self._canvas.graph_scene
-        scene.clear_all()
-
         n_tracks = len(self._all_tracks)
         logger.info("Rendering %d tracks...", n_tracks)
 
-        # Block scene updates during batch construction
-        self._canvas.setUpdatesEnabled(False)
-
-        # Add nodes
-        all_nodes = self._graph.get_all_nodes()
-        for track in all_nodes:
-            pos = getattr(track, "_ui_pos", (0, 0))
-            scene.add_track_node(track, pos[0], pos[1])
-
-        logger.info("Nodes added (%d). Adding edges...", len(all_nodes))
-
-        # Collect edges above threshold, then add in batch with per-node cap
-        threshold = self._prefs.load_edge_threshold()
+        tracks = list(self._all_tracks.values())
         all_edges = self._graph.get_all_edges()
-        eligible_edges = [e for e in all_edges if e.compatibility_score >= threshold]
 
-        # Dynamically adjust max edges per node based on library size
-        if n_tracks > 500:
-            max_per_node = 2
-        elif n_tracks > 200:
-            max_per_node = 3
-        elif n_tracks > 50:
-            max_per_node = 5
-        else:
-            max_per_node = 8
+        # Send everything to Sigma.js — it handles threshold filtering client-side
+        self._canvas.set_graph_data(tracks, all_edges, self._last_positions)
 
-        rendered_count = scene.add_edges_batch(eligible_edges, max_per_node=max_per_node)
-        logger.info("Edges added: %d (of %d eligible)", rendered_count, len(eligible_edges))
+        # Set current edge threshold for client-side filtering
+        threshold = self._prefs.load_edge_threshold()
+        self._canvas.set_edge_threshold(threshold)
 
-        # Re-enable updates
-        self._canvas.setUpdatesEnabled(True)
-
-        # Only draw cluster hulls for smaller libraries (expensive for 200+)
-        n_clusters = 0
-        if n_tracks <= 150:
-            clusters: dict[int, list[UUID]] = {}
-            for track in self._all_tracks.values():
-                cid = track.cluster_id
-                if cid is not None:
-                    clusters.setdefault(cid, []).append(track.id)
-            if clusters:
-                scene.draw_cluster_hulls(clusters)
-            n_clusters = len([c for c in clusters if c >= 0])
+        # Draw cluster hulls (Sigma.js uses lightweight background nodes)
+        clusters: dict[int, list[UUID]] = {}
+        for track in self._all_tracks.values():
+            cid = track.cluster_id
+            if cid is not None:
+                clusters.setdefault(cid, []).append(track.id)
+        n_clusters = len([c for c in clusters if c >= 0])
+        if clusters:
+            self._canvas.draw_cluster_hulls(clusters)
 
         # Update status
         self._status_label.setText(
             f"{n_tracks} tracks | "
-            f"{rendered_count} edges | "
+            f"{len(all_edges)} edges | "
             f"{n_clusters} clusters"
         )
 
-        # Defer fit_all_nodes to let the scene fully initialize first
+        # Defer fit_all_nodes to let the renderer initialize
         QTimer.singleShot(100, self._canvas.fit_all_nodes)
+
+        # Load album artwork onto nodes (deferred to not block render)
+        QTimer.singleShot(500, self._load_artwork)
+
+    def _load_artwork(self) -> None:
+        """Extract album artwork in a background thread and send to canvas."""
+        if not self._all_tracks:
+            return
+
+        track_list = [
+            (t.file_path, str(t.id)) for t in self._all_tracks.values()
+        ]
+
+        class ArtworkWorker(QThread):
+            finished = pyqtSignal(dict)
+
+            def __init__(self, tracks: list[tuple[str, str]]) -> None:
+                super().__init__()
+                self._tracks = tracks
+
+            def run(self) -> None:
+                try:
+                    result = batch_extract_artwork(self._tracks)
+                    self.finished.emit(result)
+                except Exception:
+                    self.finished.emit({})
+
+        self._artwork_worker = ArtworkWorker(track_list)
+        self._artwork_worker.finished.connect(self._on_artwork_ready)
+        self._artwork_worker.start()
+        logger.info("Started background artwork extraction for %d tracks...",
+                     len(track_list))
+
+    def _on_artwork_ready(self, artwork_map: dict) -> None:
+        """Called when background artwork extraction completes."""
+        if artwork_map:
+            self._canvas.load_node_artwork(artwork_map)
+            logger.info("Loaded artwork for %d tracks", len(artwork_map))
+        else:
+            logger.info("No album artwork found")
 
     def _apply_layout(self, mode: str) -> None:
         """Compute node positions using specified layout algorithm."""
@@ -469,11 +605,7 @@ class MainWindow(QMainWindow):
         else:
             positions = force_directed_layout(self._graph.nx_graph)
 
-        # Apply positions to tracks
-        for node_pos in positions:
-            track = self._all_tracks.get(node_pos.track_id)
-            if track:
-                track._ui_pos = (node_pos.x, node_pos.y)
+        self._last_positions = positions
 
     # ----- Event handlers -----
 
@@ -568,12 +700,26 @@ class MainWindow(QMainWindow):
             self._inspector.show_track(track)
             self._suggestions_panel.set_current_track(track)
 
+            # Update Camelot wheel overlay
+            self._canvas.set_camelot_key(
+                track.dj_metrics.key if track else None
+            )
+
             if track:
                 self._right_tabs.setCurrentIndex(0)  # Inspector tab
+                # Load tags for the selected track
+                try:
+                    tags = self._tag_store.get_tags_for_track(track.id)
+                    self._inspector.set_tags(tags)
+                except Exception:
+                    logger.exception("Error loading tags for track")
+                # Load track into player
+                self._player_panel.load_track(track)
                 # Defer suggestions to avoid blocking UI on click
                 QTimer.singleShot(50, lambda: self._safe_update_suggestions(track))
             else:
-                self._canvas.graph_scene.clear_highlights()
+                self._inspector.set_tags([])
+                self._canvas.clear_highlights()
         except Exception:
             logger.exception("Error in node selection")
 
@@ -612,6 +758,14 @@ class MainWindow(QMainWindow):
 
         menu.addSeparator()
 
+        preview_action = menu.addAction("Preview Transition...")
+        preview_action.setEnabled(self._selected_track is not None and track != self._selected_track)
+        if self._selected_track and track != self._selected_track:
+            src = self._selected_track
+            preview_action.triggered.connect(
+                lambda: self._on_preview_transition(src, track)
+            )
+
         find_similar = menu.addAction("Find Similar")
         find_similar.triggered.connect(lambda: self._find_similar(track))
 
@@ -641,10 +795,10 @@ class MainWindow(QMainWindow):
         config = self._prefs.load_suggestion_config()
         config.num_suggestions = 1
 
+        self._suggestion_engine.set_tracks(list(self._all_tracks.values()))
         results = self._suggestion_engine.suggest(
             current_track=track,
-            all_tracks=list(self._all_tracks.values()),
-            sequence=[t.id for t in self._sequence],
+            sequence=list(self._sequence),
             config=config,
         )
 
@@ -687,7 +841,7 @@ class MainWindow(QMainWindow):
             is_user_created=True,
         )
         self._graph.add_edge(edge)
-        self._canvas.graph_scene.add_edge_line(edge)
+        self._canvas.add_edge(edge)
         self._status_label.setText(
             f"Edge created: {source.filename} -> {target.filename} "
             f"(score: {score:.2f})"
@@ -716,10 +870,10 @@ class MainWindow(QMainWindow):
         config.strategy = SuggestionStrategy(strategy_str)
 
         try:
+            self._suggestion_engine.set_tracks(list(self._all_tracks.values()))
             results = self._suggestion_engine.suggest(
                 current_track=track,
-                all_tracks=list(self._all_tracks.values()),
-                sequence=[t.id for t in self._sequence],
+                sequence=list(self._sequence),
                 config=config,
             )
         except Exception:
@@ -734,7 +888,7 @@ class MainWindow(QMainWindow):
         # Highlight suggested tracks on canvas
         try:
             suggestion_ids = [r.track_id for r in results]
-            self._canvas.graph_scene.highlight_suggestion_nodes(suggestion_ids)
+            self._canvas.highlight_suggestions(suggestion_ids)
         except Exception:
             logger.exception("Failed to highlight suggestions")
 
@@ -744,10 +898,10 @@ class MainWindow(QMainWindow):
 
     def _on_suggestion_clicked(self, track_id: UUID) -> None:
         """Focus on a suggested track."""
-        node = self._canvas.graph_scene.get_node(track_id)
-        if node:
-            self._canvas.centerOn(node)
-            node.setSelected(True)
+        track = self._all_tracks.get(track_id)
+        if track:
+            self._on_node_selected(track)
+            self._canvas.highlight_suggestions([track_id])
 
     def _on_track_removed_from_set(self, track_id: UUID) -> None:
         self._sequence = [t for t in self._sequence if t.id != track_id]
@@ -764,8 +918,49 @@ class MainWindow(QMainWindow):
         self._sequence.clear()
         self._update_sequence_display()
 
+    def _on_build_smart_set(self) -> None:
+        """Open the smart set builder dialog and generate a set."""
+        if not self._all_tracks:
+            QMessageBox.information(self, "Build Set", "Load tracks first.")
+            return
+
+        from rekordbox_creative.ui.dialogs.set_builder import SetBuilderDialog
+
+        tracks = list(self._all_tracks.values())
+        dialog = SetBuilderDialog(tracks, self._selected_track, self)
+        if dialog.exec():
+            config = dialog.get_config()
+            if not config:
+                return
+
+            self._status_label.setText("Generating smart set...")
+            QApplication.processEvents()
+
+            try:
+                generator = SetGenerator()
+                suggestion_config = self._prefs.load_suggestion_config()
+                result = generator.generate(config, tracks, suggestion_config)
+            except Exception as e:
+                logger.exception("Set generation failed")
+                QMessageBox.critical(self, "Error", f"Set generation failed: {e}")
+                return
+
+            if not result:
+                QMessageBox.information(
+                    self, "Build Set", "Could not generate a set with the given settings."
+                )
+                return
+
+            self._sequence = result
+            self._update_sequence_display()
+            self._right_tabs.setCurrentIndex(2)  # Set tab
+            total_min = sum(t.duration_seconds for t in result) / 60
+            self._status_label.setText(
+                f"Generated {len(result)}-track set ({total_min:.0f} min)"
+            )
+
     def _update_sequence_display(self) -> None:
-        """Refresh playlist panel and node sequence badges."""
+        """Refresh playlist panel, node sequence badges, and energy flow."""
         from rekordbox_creative.graph.scoring import compute_compatibility
 
         compat_scores: list[float | None] = [None]
@@ -777,14 +972,111 @@ class MainWindow(QMainWindow):
 
         self._playlist_panel.update_set(self._sequence, compat_scores)
 
-        # Update node badges
-        scene = self._canvas.graph_scene
-        for node in scene.get_all_nodes():
-            idx = next(
-                (i for i, t in enumerate(self._sequence) if t.id == node.track_id),
-                None,
+        # Update node badges via Sigma.js
+        self._canvas.clear_sequence_badges()
+        for i, track in enumerate(self._sequence):
+            self._canvas.set_node_in_sequence(track.id, i)
+
+        # Update energy flow sparkline
+        self._canvas.set_energy_sequence(self._sequence)
+
+    def _on_play_state_changed(self, is_playing: bool) -> None:
+        """Handle play/pause state changes from the player panel."""
+        track = self._player_panel.get_current_track()
+        if is_playing and track:
+            self._canvas.set_playing_node(track.id)
+        else:
+            self._canvas.clear_playing_node()
+
+    def _on_preview_transition(self, track_a: Track, track_b: Track) -> None:
+        """Open the transition preview dialog for two tracks."""
+        from rekordbox_creative.ui.dialogs.transition_preview import TransitionPreviewDialog
+
+        dialog = TransitionPreviewDialog(track_a, track_b, self)
+        dialog.exec()
+
+    def _save_to_history(self, name: str = "") -> None:
+        """Auto-save the current sequence to set history."""
+        if not self._sequence:
+            return
+        try:
+            from rekordbox_creative.graph.scoring import compute_compatibility
+
+            track_ids = [t.id for t in self._sequence]
+            scores: list[float | None] = [None]
+            for i in range(1, len(self._sequence)):
+                s, _ = compute_compatibility(
+                    self._sequence[i - 1], self._sequence[i]
+                )
+                scores.append(s)
+
+            valid_scores = [s for s in scores if s is not None]
+            avg_compat = sum(valid_scores) / len(valid_scores) if valid_scores else 0.0
+            total_min = sum(t.duration_seconds for t in self._sequence) / 60
+
+            if not name:
+                first = self._sequence[0]
+                name = f"Set - {first.metadata.title or first.filename}"
+
+            self._history_store.save_set(
+                name=name,
+                track_ids=track_ids,
+                transition_scores=scores,
+                duration_minutes=total_min,
+                avg_compatibility=avg_compat,
             )
-            node.set_in_sequence(idx is not None, idx)
+            self._history_panel.refresh()
+        except Exception:
+            logger.exception("Failed to save set to history")
+
+    def _on_load_history_set(self, history_id: str) -> None:
+        """Load a historical set into the current sequence."""
+        try:
+            track_ids = self._history_store.get_set_track_ids(history_id)
+            loaded: list[Track] = []
+            for tid in track_ids:
+                track = self._all_tracks.get(tid)
+                if track:
+                    loaded.append(track)
+            if loaded:
+                self._sequence = loaded
+                self._update_sequence_display()
+                self._right_tabs.setCurrentIndex(2)  # Set tab
+                self._status_label.setText(
+                    f"Loaded {len(loaded)}-track set from history"
+                )
+        except Exception:
+            logger.exception("Failed to load historical set")
+
+    def _on_tag_add(self) -> None:
+        """Open tag editor dialog for the selected track."""
+        if not self._selected_track:
+            return
+        from rekordbox_creative.ui.dialogs.tag_editor import TagEditorDialog
+        track = self._selected_track
+        current_tags = self._tag_store.get_tags_for_track(track.id)
+        dialog = TagEditorDialog(self._tag_store, current_tags, self)
+        if dialog.exec():
+            # Sync tag assignments
+            old_ids = {t["id"] for t in current_tags}
+            new_ids = dialog.get_selected_tag_ids()
+            for tag_id in new_ids - old_ids:
+                self._tag_store.add_tag_to_track(track.id, tag_id)
+            for tag_id in old_ids - new_ids:
+                self._tag_store.remove_tag_from_track(track.id, tag_id)
+            # Refresh display
+            updated_tags = self._tag_store.get_tags_for_track(track.id)
+            self._inspector.set_tags(updated_tags)
+            self._canvas.set_node_tags(track.id, updated_tags)
+
+    def _on_tag_remove(self, tag_id: int) -> None:
+        """Remove a tag from the selected track."""
+        if not self._selected_track:
+            return
+        self._tag_store.remove_tag_from_track(self._selected_track.id, tag_id)
+        tags = self._tag_store.get_tags_for_track(self._selected_track.id)
+        self._inspector.set_tags(tags)
+        self._canvas.set_node_tags(self._selected_track.id, tags)
 
     def _on_export(self, fmt: str) -> None:
         if not self._sequence:
@@ -809,21 +1101,17 @@ class MainWindow(QMainWindow):
 
                 export_csv(self._sequence, path)
             self._status_label.setText(f"Exported to {path}")
+
+            # Auto-save to set history
+            self._save_to_history(Path(path).stem)
         except Exception as e:
             QMessageBox.critical(self, "Export Error", str(e))
 
     def _on_save_state(self) -> None:
-        from rekordbox_creative.db.models import GraphState, NodePosition, ViewportState
-
-        nodes_pos = []
-        for node in self._canvas.graph_scene.get_all_nodes():
-            pos = node.scenePos()
-            nodes_pos.append(NodePosition(
-                track_id=node.track_id, x=pos.x(), y=pos.y()
-            ))
+        from rekordbox_creative.db.models import GraphState, ViewportState
 
         state = GraphState(
-            node_positions=nodes_pos,
+            node_positions=self._last_positions,
             viewport=ViewportState(),
             edge_threshold=self._prefs.load_edge_threshold(),
         )
@@ -838,7 +1126,7 @@ class MainWindow(QMainWindow):
     def _on_search(self, text: str) -> None:
         """Highlight nodes matching search text."""
         if not text:
-            self._canvas.graph_scene.clear_highlights()
+            self._canvas.clear_highlights()
             return
 
         text_lower = text.lower()
@@ -852,26 +1140,11 @@ class MainWindow(QMainWindow):
                     or text_lower == key or text_lower == bpm_str):
                 matching.append(track.id)
 
-        self._canvas.graph_scene.highlight_suggestion_nodes(matching)
+        self._canvas.highlight_suggestions(matching)
 
     def _on_layout_change(self, mode: str) -> None:
         self._apply_layout(mode)
-        scene = self._canvas.graph_scene
-
-        # Block updates during batch position changes
-        self._canvas.setUpdatesEnabled(False)
-
-        for track_id, track in self._all_tracks.items():
-            node = scene.get_node(track_id)
-            pos = getattr(track, "_ui_pos", (0, 0))
-            if node:
-                node.setPos(pos[0], pos[1])
-        # Update edges
-        for edge_line in scene._edges.values():
-            edge_line.update_position()
-
-        self._canvas.setUpdatesEnabled(True)
-        self._canvas.fit_all_nodes()
+        self._canvas.update_layout(self._last_positions)
 
     def _on_weights_changed(self, weights: dict[str, float]) -> None:
         config = self._prefs.load_suggestion_config()
@@ -888,7 +1161,7 @@ class MainWindow(QMainWindow):
 
     def _on_threshold_changed(self, threshold: float) -> None:
         self._prefs.save_edge_threshold(threshold)
-        self._render_graph()
+        self._canvas.set_edge_threshold(threshold)
 
     def closeEvent(self, event) -> None:
         self._db.close()
@@ -899,7 +1172,9 @@ class MainWindow(QMainWindow):
         key = event.key()
         mod = event.modifiers()
 
-        if key == Qt.Key.Key_F and not mod:
+        if key == Qt.Key.Key_Space and not mod:
+            self._player_panel._toggle_play()
+        elif key == Qt.Key.Key_F and not mod:
             self._canvas.fit_all_nodes()
         elif key == Qt.Key.Key_1:
             self._right_tabs.setCurrentIndex(0)
@@ -909,6 +1184,8 @@ class MainWindow(QMainWindow):
             self._right_tabs.setCurrentIndex(2)
         elif key == Qt.Key.Key_4:
             self._right_tabs.setCurrentIndex(3)
+        elif key == Qt.Key.Key_5:
+            self._right_tabs.setCurrentIndex(4)
         elif key == Qt.Key.Key_Delete or key == Qt.Key.Key_Backspace:
             if self._selected_track and self._selected_track in self._sequence:
                 self._on_track_removed_from_set(self._selected_track.id)

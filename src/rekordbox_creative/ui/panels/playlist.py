@@ -25,6 +25,17 @@ from PyQt6.QtWidgets import (
 from rekordbox_creative.db.models import Track
 
 
+def _compat_color(score: float) -> str:
+    """Color for compatibility score connector."""
+    if score >= 0.8:
+        return "#22c55e"
+    if score >= 0.6:
+        return "#eab308"
+    if score >= 0.4:
+        return "#f97316"
+    return "#ef4444"
+
+
 class PlaylistTrackItem(QWidget):
     """A single track row in the playlist."""
 
@@ -35,50 +46,70 @@ class PlaylistTrackItem(QWidget):
         super().__init__(parent)
         self.track = track
 
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(4, 2, 4, 2)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 4, 8, 4)
+        layout.setSpacing(2)
 
-        # Position
-        pos_label = QLabel(f"{position + 1}.")
-        pos_label.setFixedWidth(24)
-        pos_label.setStyleSheet("color: #FFD700; font-size: 11px; font-weight: bold;")
-        layout.addWidget(pos_label)
+        # Compatibility connector (shown above each track except first)
+        if compat_score is not None:
+            color = _compat_color(compat_score)
+            connector = QLabel(f"  {compat_score:.2f}")
+            connector.setStyleSheet(
+                f"color: {color}; font-size: 10px; font-weight: 600;"
+                f"padding: 0 0 2px 20px;"
+                f"border-left: 2px solid {color};"
+                f"margin-left: 8px;"
+            )
+            layout.addWidget(connector)
+
+        # Track row
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+
+        # Position badge
+        pos_label = QLabel(f"{position + 1}")
+        pos_label.setFixedSize(22, 22)
+        pos_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        pos_label.setStyleSheet(
+            "color: #07070b; font-size: 11px; font-weight: 700;"
+            "background: #FFD700; border-radius: 11px;"
+        )
+        row.addWidget(pos_label)
 
         # Track info
         info = QVBoxLayout()
         info.setSpacing(0)
         title = track.metadata.title or track.filename
         name_label = QLabel(title[:28])
-        name_label.setStyleSheet("color: #E0E0E0; font-size: 11px;")
+        name_label.setStyleSheet("color: #f1f5f9; font-size: 11px; font-weight: 500;")
         info.addWidget(name_label)
 
         detail = f"{track.dj_metrics.bpm:.0f} BPM  {track.dj_metrics.key}"
         detail_label = QLabel(detail)
-        detail_label.setStyleSheet("color: #888888; font-size: 10px;")
+        detail_label.setStyleSheet("color: #64748b; font-size: 10px;")
         info.addWidget(detail_label)
-        layout.addLayout(info)
+        row.addLayout(info)
 
-        layout.addStretch()
-
-        # Compatibility arrow (if not first)
-        if compat_score is not None:
-            arrow = QLabel(f"  {compat_score:.2f}")
-            arrow.setStyleSheet("color: #00D4FF; font-size: 10px;")
-            layout.addWidget(arrow)
+        row.addStretch()
 
         # Remove button
-        remove_btn = QPushButton("x")
-        remove_btn.setFixedSize(20, 20)
+        remove_btn = QPushButton("\u00d7")
+        remove_btn.setFixedSize(22, 22)
         remove_btn.setStyleSheet("""
             QPushButton {
-                background: transparent; color: #FF6B35;
-                border: 1px solid #FF6B35; border-radius: 3px;
-                font-size: 10px;
+                background: transparent; color: #64748b;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 11px; font-size: 14px;
             }
-            QPushButton:hover { background: #FF6B35; color: white; }
+            QPushButton:hover {
+                background: rgba(239, 68, 68, 0.15);
+                color: #ef4444; border-color: #ef4444;
+            }
         """)
         remove_btn.clicked.connect(lambda: self.remove_clicked.emit(track.id))
-        layout.addWidget(remove_btn)
+        row.addWidget(remove_btn)
+
+        layout.addLayout(row)
 
 
 class PlaylistPanel(QScrollArea):
@@ -95,27 +126,34 @@ class PlaylistPanel(QScrollArea):
         self.setWidgetResizable(True)
         self.setMinimumWidth(260)
         self.setMaximumWidth(350)
-        self.setStyleSheet("QScrollArea { background: #0F0F23; border: none; }")
+        self.setStyleSheet("""
+            QScrollArea { background: rgba(13, 17, 23, 0.92); border: none; }
+        """)
 
         self._container = QWidget()
         self._layout = QVBoxLayout(self._container)
         self._layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self._layout.setSpacing(4)
+        self._layout.setSpacing(6)
+        self._layout.setContentsMargins(12, 8, 12, 8)
         self.setWidget(self._container)
 
         # Header
         header = QLabel("CURRENT SET")
-        header.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        header.setStyleSheet("color: #00D4FF; padding: 8px;")
+        header.setFont(QFont("Inter", 10, QFont.Weight.DemiBold))
+        header.setStyleSheet(
+            "color: #64748b; letter-spacing: 1.5px; padding: 4px 0 8px 0;"
+        )
         self._layout.addWidget(header)
 
         # Stats
         self._stats_label = QLabel("0 tracks | 0:00")
-        self._stats_label.setStyleSheet("color: #888888; font-size: 11px; padding: 0 8px;")
+        self._stats_label.setStyleSheet("color: #94a3b8; font-size: 12px;")
         self._layout.addWidget(self._stats_label)
 
         self._compat_label = QLabel("Avg compatibility: --")
-        self._compat_label.setStyleSheet("color: #888888; font-size: 11px; padding: 0 8px;")
+        self._compat_label.setStyleSheet(
+            "color: #64748b; font-size: 11px; padding-bottom: 4px;"
+        )
         self._layout.addWidget(self._compat_label)
 
         # Buttons
@@ -123,10 +161,20 @@ class PlaylistPanel(QScrollArea):
         self._optimize_btn = QPushButton("Optimize Order")
         self._optimize_btn.setStyleSheet("""
             QPushButton {
-                background: #00D4FF; color: #000; border: none;
-                padding: 4px 12px; border-radius: 3px; font-size: 11px;
+                background: qlineargradient(
+                    x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #00D4FF, stop:1 #0099cc
+                );
+                color: #07070b; border: none;
+                padding: 6px 14px; border-radius: 6px;
+                font-size: 11px; font-weight: 600;
             }
-            QPushButton:hover { background: #33DDFF; }
+            QPushButton:hover {
+                background: qlineargradient(
+                    x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #33DDFF, stop:1 #00bbee
+                );
+            }
         """)
         self._optimize_btn.clicked.connect(self.optimize_requested.emit)
         btn_row.addWidget(self._optimize_btn)
@@ -134,11 +182,16 @@ class PlaylistPanel(QScrollArea):
         self._clear_btn = QPushButton("Clear All")
         self._clear_btn.setStyleSheet("""
             QPushButton {
-                background: transparent; color: #FF6B35;
-                border: 1px solid #FF6B35; padding: 4px 12px;
-                border-radius: 3px; font-size: 11px;
+                background: transparent;
+                color: #ef4444;
+                border: 1px solid rgba(239, 68, 68, 0.3);
+                padding: 6px 14px; border-radius: 6px;
+                font-size: 11px; font-weight: 500;
             }
-            QPushButton:hover { background: #FF6B35; color: white; }
+            QPushButton:hover {
+                background: rgba(239, 68, 68, 0.12);
+                border-color: #ef4444;
+            }
         """)
         self._clear_btn.clicked.connect(self.clear_requested.emit)
         btn_row.addWidget(self._clear_btn)
@@ -148,12 +201,16 @@ class PlaylistPanel(QScrollArea):
         self._list = QListWidget()
         self._list.setStyleSheet("""
             QListWidget {
-                background: #0F0F23; border: none; outline: none;
+                background: transparent; border: none; outline: none;
             }
             QListWidget::item {
-                border-bottom: 1px solid #1A1A2E; padding: 2px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+                padding: 0;
+                border-radius: 6px;
             }
-            QListWidget::item:selected { background: #16213E; }
+            QListWidget::item:selected {
+                background: rgba(0, 212, 255, 0.06);
+            }
         """)
         self._list.setDragDropMode(QListWidget.DragDropMode.InternalMove)
         self._layout.addWidget(self._list)
@@ -164,11 +221,16 @@ class PlaylistPanel(QScrollArea):
             btn = QPushButton(f"Export {fmt}")
             btn.setStyleSheet("""
                 QPushButton {
-                    background: #1A1A2E; color: #E0E0E0;
-                    border: 1px solid #333; padding: 3px 8px;
-                    border-radius: 3px; font-size: 10px;
+                    background: rgba(22, 27, 34, 0.6);
+                    color: #94a3b8;
+                    border: 1px solid rgba(255, 255, 255, 0.06);
+                    padding: 4px 10px; border-radius: 6px;
+                    font-size: 10px; font-weight: 500;
                 }
-                QPushButton:hover { border-color: #00D4FF; }
+                QPushButton:hover {
+                    border-color: rgba(0, 212, 255, 0.3);
+                    color: #f1f5f9;
+                }
             """)
             btn.clicked.connect(lambda checked, f=fmt.lower(): self.export_requested.emit(f))
             export_row.addWidget(btn)
@@ -179,11 +241,16 @@ class PlaylistPanel(QScrollArea):
         add_seg_btn = QPushButton("+ Add Segment")
         add_seg_btn.setStyleSheet("""
             QPushButton {
-                background: #1A1A2E; color: #E0E0E0;
-                border: 1px solid #333; padding: 3px 8px;
-                border-radius: 3px; font-size: 10px;
+                background: rgba(22, 27, 34, 0.6);
+                color: #94a3b8;
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                padding: 4px 10px; border-radius: 6px;
+                font-size: 10px; font-weight: 500;
             }
-            QPushButton:hover { border-color: #FFD700; color: #FFD700; }
+            QPushButton:hover {
+                border-color: rgba(255, 215, 0, 0.3);
+                color: #FFD700;
+            }
         """)
         add_seg_btn.clicked.connect(self._on_add_segment)
         seg_row.addWidget(add_seg_btn)
@@ -254,15 +321,12 @@ class PlaylistPanel(QScrollArea):
 
     def _refresh_segment_labels(self) -> None:
         """Insert segment headers in the list widget."""
-        # Re-render the list with segment labels
-        # For simplicity, just update the existing items' labels
         for seg_name, start, _end in self._segments:
             if start < self._list.count():
                 item = self._list.item(start)
                 if item:
                     widget = self._list.itemWidget(item)
                     if widget:
-                        # Find the position label and prepend segment name
                         for child in widget.findChildren(QLabel):
                             if child.styleSheet() and "FFD700" in child.styleSheet():
                                 current = child.text()

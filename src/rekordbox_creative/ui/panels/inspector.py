@@ -18,36 +18,45 @@ from PyQt6.QtWidgets import (
 )
 
 from rekordbox_creative.db.models import Track
+from rekordbox_creative.ui.widgets.tag_chips import TagChipRow
+
+
+def _bar_gradient(color: str) -> str:
+    """Build a QProgressBar stylesheet with a custom accent color."""
+    return f"""
+        QProgressBar {{
+            background: rgba(22, 27, 34, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 4px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 10px;
+        }}
+        QProgressBar::chunk {{
+            background: qlineargradient(
+                x1:0, y1:0, x2:1, y2:0,
+                stop:0 {color}, stop:1 {color}80
+            );
+            border-radius: 3px;
+        }}
+    """
 
 
 class MetricBar(QWidget):
     """A labeled progress bar for displaying a 0-1 metric."""
 
-    def __init__(self, label: str, parent=None) -> None:
+    def __init__(self, label: str, color: str = "#00D4FF", parent=None) -> None:
         super().__init__(parent)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 1, 0, 1)
         self._label = QLabel(label)
-        self._label.setFixedWidth(90)
-        self._label.setStyleSheet("color: #BBBBBB; font-size: 11px;")
+        self._label.setFixedWidth(80)
+        self._label.setStyleSheet("color: #94a3b8; font-size: 11px;")
         self._bar = QProgressBar()
         self._bar.setRange(0, 100)
         self._bar.setTextVisible(True)
         self._bar.setFixedHeight(16)
-        self._bar.setStyleSheet("""
-            QProgressBar {
-                background: #1A1A2E;
-                border: 1px solid #333;
-                border-radius: 3px;
-                text-align: center;
-                color: #E0E0E0;
-                font-size: 10px;
-            }
-            QProgressBar::chunk {
-                background: #00D4FF;
-                border-radius: 2px;
-            }
-        """)
+        self._bar.setStyleSheet(_bar_gradient(color))
         layout.addWidget(self._label)
         layout.addWidget(self._bar)
 
@@ -59,28 +68,42 @@ class MetricBar(QWidget):
 class InspectorPanel(QScrollArea):
     """Side panel showing selected track's full details."""
 
+    @property
+    def tag_row(self) -> TagChipRow:
+        """Expose the tag chip row for external signal connections."""
+        return self._tag_row
+
+    def set_tags(self, tags: list[dict]) -> None:
+        """Update the tag chips displayed for the current track."""
+        self._tag_row.set_tags(tags)
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setWidgetResizable(True)
         self.setMinimumWidth(260)
         self.setMaximumWidth(350)
-        self.setStyleSheet("QScrollArea { background: #0F0F23; border: none; }")
+        self.setStyleSheet("""
+            QScrollArea { background: rgba(13, 17, 23, 0.92); border: none; }
+        """)
 
         self._container = QWidget()
         self._layout = QVBoxLayout(self._container)
         self._layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._layout.setSpacing(4)
+        self._layout.setContentsMargins(12, 8, 12, 8)
         self.setWidget(self._container)
 
         # Header
         self._header = QLabel("INSPECTOR")
-        self._header.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        self._header.setStyleSheet("color: #00D4FF; padding: 8px;")
+        self._header.setFont(QFont("Inter", 10, QFont.Weight.DemiBold))
+        self._header.setStyleSheet(
+            "color: #64748b; letter-spacing: 1.5px; padding: 4px 0 8px 0;"
+        )
         self._layout.addWidget(self._header)
 
         # Placeholder
         self._placeholder = QLabel("Select a track to inspect")
-        self._placeholder.setStyleSheet("color: #888888; padding: 16px;")
+        self._placeholder.setStyleSheet("color: #475569; padding: 16px 0;")
         self._placeholder.setWordWrap(True)
         self._layout.addWidget(self._placeholder)
 
@@ -88,72 +111,83 @@ class InspectorPanel(QScrollArea):
         self._details = QWidget()
         self._details_layout = QVBoxLayout(self._details)
         self._details_layout.setSpacing(4)
+        self._details_layout.setContentsMargins(0, 0, 0, 0)
         self._details.setVisible(False)
         self._layout.addWidget(self._details)
 
         self._title_label = QLabel()
-        self._title_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        self._title_label.setStyleSheet("color: #E0E0E0;")
+        self._title_label.setFont(QFont("Inter", 13, QFont.Weight.Bold))
+        self._title_label.setStyleSheet("color: #f1f5f9; padding-bottom: 2px;")
         self._title_label.setWordWrap(True)
         self._details_layout.addWidget(self._title_label)
 
         self._artist_label = QLabel()
-        self._artist_label.setStyleSheet("color: #BBBBBB; font-size: 11px;")
+        self._artist_label.setStyleSheet("color: #94a3b8; font-size: 12px;")
         self._details_layout.addWidget(self._artist_label)
 
         self._duration_label = QLabel()
-        self._duration_label.setStyleSheet("color: #888888; font-size: 11px;")
+        self._duration_label.setStyleSheet(
+            "color: #64748b; font-size: 11px; padding-bottom: 4px;"
+        )
         self._details_layout.addWidget(self._duration_label)
 
         self._add_separator("DJ Metrics")
 
         self._bpm_label = QLabel()
-        self._bpm_label.setStyleSheet("color: #E0E0E0; font-size: 11px;")
+        self._bpm_label.setStyleSheet("color: #f1f5f9; font-size: 12px;")
         self._details_layout.addWidget(self._bpm_label)
 
         self._key_label = QLabel()
-        self._key_label.setStyleSheet("color: #E0E0E0; font-size: 11px;")
+        self._key_label.setStyleSheet("color: #f1f5f9; font-size: 12px;")
         self._details_layout.addWidget(self._key_label)
 
         self._groove_label = QLabel()
-        self._groove_label.setStyleSheet("color: #BBBBBB; font-size: 11px;")
+        self._groove_label.setStyleSheet("color: #94a3b8; font-size: 11px;")
         self._details_layout.addWidget(self._groove_label)
 
         self._freq_label = QLabel()
-        self._freq_label.setStyleSheet("color: #BBBBBB; font-size: 11px;")
+        self._freq_label.setStyleSheet("color: #94a3b8; font-size: 11px;")
         self._details_layout.addWidget(self._freq_label)
 
-        self._mix_in_bar = MetricBar("Mix-In")
+        self._mix_in_bar = MetricBar("Mix-In", "#22c55e")
         self._details_layout.addWidget(self._mix_in_bar)
 
-        self._mix_out_bar = MetricBar("Mix-Out")
+        self._mix_out_bar = MetricBar("Mix-Out", "#22c55e")
         self._details_layout.addWidget(self._mix_out_bar)
 
         self._add_separator("Audio Features")
 
-        self._energy_bar = MetricBar("Energy")
+        self._energy_bar = MetricBar("Energy", "#ef4444")
         self._details_layout.addWidget(self._energy_bar)
-        self._dance_bar = MetricBar("Dance")
+        self._dance_bar = MetricBar("Dance", "#eab308")
         self._details_layout.addWidget(self._dance_bar)
-        self._valence_bar = MetricBar("Valence")
+        self._valence_bar = MetricBar("Valence", "#f97316")
         self._details_layout.addWidget(self._valence_bar)
-        self._acoustic_bar = MetricBar("Acoustic")
+        self._acoustic_bar = MetricBar("Acoustic", "#22BBAA")
         self._details_layout.addWidget(self._acoustic_bar)
-        self._instrum_bar = MetricBar("Instrum.")
+        self._instrum_bar = MetricBar("Instrum.", "#4488FF")
         self._details_layout.addWidget(self._instrum_bar)
-        self._live_bar = MetricBar("Liveness")
+        self._live_bar = MetricBar("Liveness", "#AA44FF")
         self._details_layout.addWidget(self._live_bar)
+
+        # Tags section
+        self._add_separator("Tags")
+        self._tag_row = TagChipRow()
+        self._details_layout.addWidget(self._tag_row)
 
         self._add_separator("Structure")
         self._structure_label = QLabel()
-        self._structure_label.setStyleSheet("color: #BBBBBB; font-size: 11px;")
+        self._structure_label.setStyleSheet("color: #94a3b8; font-size: 11px;")
         self._structure_label.setWordWrap(True)
         self._details_layout.addWidget(self._structure_label)
 
     def _add_separator(self, title: str) -> None:
-        sep = QLabel(f"--- {title} ---")
-        sep.setStyleSheet("color: #555555; font-size: 10px; padding-top: 6px;")
-        sep.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sep = QLabel(title.upper())
+        sep.setFont(QFont("Inter", 9, QFont.Weight.DemiBold))
+        sep.setStyleSheet(
+            "color: #475569; letter-spacing: 1px; padding: 10px 0 4px 0;"
+            "border-top: 1px solid rgba(255, 255, 255, 0.04);"
+        )
         self._details_layout.addWidget(sep)
 
     def show_track(self, track: Track | None) -> None:

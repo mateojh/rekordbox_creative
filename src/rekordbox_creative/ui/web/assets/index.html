@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rekordbox Creative — Graph</title>
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+    <div id="sigma-container"></div>
+    <div id="tooltip">
+        <div class="tt-title"></div>
+        <div class="tt-artist"></div>
+        <div class="tt-metrics">
+            <span class="tt-bpm"></span>
+            <span class="tt-key"></span>
+        </div>
+    </div>
+    <div id="loading">
+        <span class="spinner"></span>
+        Initializing graph...
+    </div>
+    <div id="minimap"></div>
+    <div id="camelot-wheel"></div>
+    <div id="energy-flow"></div>
+    <div id="filter-bar"></div>
+
+    <!-- Vendor libraries -->
+    <script src="vendor/graphology.umd.min.js"></script>
+    <script src="vendor/sigma.min.js"></script>
+
+    <!-- Qt WebChannel bridge -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+
+    <!-- App scripts (order matters) -->
+    <script src="js/colors.js"></script>
+    <script src="js/graph.js"></script>
+    <script src="js/interactions.js"></script>
+    <script src="js/node-images.js"></script>
+    <script src="js/minimap.js"></script>
+    <script src="js/camelot-wheel.js"></script>
+    <script src="js/energy-flow.js"></script>
+    <script src="js/filters.js"></script>
+    <script src="js/bridge.js"></script>
+
+    <script>
+        // Hide loading indicator and init overlays once engine is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            var checkEngine = setInterval(function() {
+                if (window.graphEngine) {
+                    var loading = document.getElementById('loading');
+                    if (loading) loading.style.display = 'none';
+
+                    // Initialize minimap
+                    var minimapContainer = document.getElementById('minimap');
+                    if (minimapContainer && typeof Minimap !== 'undefined') {
+                        window.minimap = new Minimap(window.graphEngine, minimapContainer);
+                    }
+
+                    // Initialize Camelot wheel
+                    var cwContainer = document.getElementById('camelot-wheel');
+                    if (cwContainer && typeof CamelotWheel !== 'undefined') {
+                        window.camelotWheel = new CamelotWheel(cwContainer);
+                    }
+
+                    // Initialize energy flow
+                    var efContainer = document.getElementById('energy-flow');
+                    if (efContainer && typeof EnergyFlow !== 'undefined') {
+                        window.energyFlow = new EnergyFlow(efContainer);
+                    }
+
+                    // Initialize filter bar
+                    var fbContainer = document.getElementById('filter-bar');
+                    if (fbContainer && typeof FilterBar !== 'undefined') {
+                        window.filterBar = new FilterBar(window.graphEngine, fbContainer);
+                    }
+
+                    // Initialize album art overlay
+                    if (typeof NodeImageOverlay !== 'undefined') {
+                        window.nodeImageOverlay = new NodeImageOverlay(window.graphEngine);
+                    }
+
+                    clearInterval(checkEngine);
+                }
+            }, 100);
+            // Timeout: hide loading after 5s regardless
+            setTimeout(function() {
+                var loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'none';
+            }, 5000);
+        });
+    </script>
+</body>
+</html>

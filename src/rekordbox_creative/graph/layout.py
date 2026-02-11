@@ -74,7 +74,7 @@ def scatter_layout(
         n_components=2,
         perplexity=effective_perplexity,
         random_state=random_state,
-        n_iter=1000,
+        max_iter=1000,
     )
     coords = tsne.fit_transform(vectors)
 

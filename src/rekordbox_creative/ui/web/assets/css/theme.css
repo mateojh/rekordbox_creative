@@ -1,0 +1,296 @@
+/* Dark glassmorphism theme for the Sigma.js graph container */
+
+:root {
+    --bg-deep: #07070b;
+    --bg-canvas: #0d1117;
+    --bg-surface: #161b22;
+    --bg-elevated: #1e293b;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent-primary: #00D4FF;
+    --accent-green: #22c55e;
+    --accent-amber: #eab308;
+    --accent-red: #ef4444;
+    --accent-gold: #FFD700;
+    --border-subtle: rgba(255, 255, 255, 0.06);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-canvas);
+    font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+}
+
+#sigma-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+        ellipse at 20% 50%,
+        rgba(0, 212, 255, 0.03) 0%,
+        transparent 60%
+    ),
+    radial-gradient(
+        ellipse at 80% 30%,
+        rgba(106, 68, 255, 0.03) 0%,
+        transparent 50%
+    ),
+    var(--bg-canvas);
+}
+
+/* Tooltip for hover info */
+#tooltip {
+    display: none;
+    position: absolute;
+    z-index: 1000;
+    pointer-events: none;
+    padding: 8px 12px;
+    background: rgba(22, 27, 34, 0.92);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 12px;
+    line-height: 1.5;
+    max-width: 260px;
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.4),
+        0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+#tooltip .tt-title {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 2px;
+    color: var(--text-primary);
+}
+
+#tooltip .tt-artist {
+    color: var(--text-secondary);
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+#tooltip .tt-metrics {
+    display: flex;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+#tooltip .tt-metrics .tt-key {
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+#tooltip .tt-metrics .tt-bpm {
+    font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* Minimap container */
+#minimap {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 160px;
+    height: 120px;
+    background: rgba(22, 27, 34, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    overflow: hidden;
+    display: none;  /* Shown by minimap.js when initialized */
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+#minimap:hover {
+    border-color: rgba(0, 212, 255, 0.2);
+}
+
+/* Loading indicator */
+#loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-muted);
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+
+#loading .spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--text-muted);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Camelot wheel overlay */
+#camelot-wheel {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: block;
+    transition: opacity 0.2s;
+    opacity: 0.85;
+}
+#camelot-wheel:hover {
+    opacity: 1;
+}
+
+/* Energy flow overlay */
+#energy-flow {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    display: none;  /* Shown by energy-flow.js when sequence has 2+ tracks */
+}
+
+/* Filter bar */
+#filter-bar {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: none;  /* Shown by filters.js on init */
+    background: rgba(22, 27, 34, 0.88);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+#filter-bar .fb-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+#filter-bar .fb-group:last-of-type {
+    margin-bottom: 0;
+}
+
+#filter-bar .fb-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    min-width: 28px;
+}
+
+#filter-bar .fb-keys {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+}
+
+#filter-bar .fb-key-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid;
+    border-radius: 50%;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    background: transparent;
+}
+#filter-bar .fb-key-chip:hover {
+    transform: scale(1.15);
+}
+
+#filter-bar .fb-input {
+    width: 48px;
+    padding: 3px 6px;
+    background: rgba(13, 17, 23, 0.6);
+    border: 1px solid var(--border-subtle);
+    border-radius: 5px;
+    color: var(--text-primary);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+    text-align: center;
+}
+#filter-bar .fb-input:focus {
+    border-color: rgba(0, 212, 255, 0.4);
+    outline: none;
+}
+#filter-bar .fb-input::placeholder {
+    color: var(--text-muted);
+}
+
+#filter-bar .fb-dash {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+#filter-bar .fb-clear {
+    margin-top: 6px;
+    width: 100%;
+    padding: 4px 0;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-subtle);
+    border-radius: 5px;
+    color: var(--text-muted);
+    font-size: 10px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+#filter-bar .fb-clear:hover {
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--accent-red);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
